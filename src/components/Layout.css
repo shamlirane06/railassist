@@ -1,0 +1,18 @@
+.layout-root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.layout-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 430px;
+  width: 100%;
+  margin: 0 auto;
+  background: var(--color-surface);
+  min-height: 100dvh;
+  position: relative;
+}
