@@ -1,16 +1,22 @@
-# React + Vite
+RailAssist
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+RailAssist is a web app designed to help passengers who are unfamiliar with a railway station. It helps users find platforms, facilities, accessible routes and assistance inside the station.
 
-Currently, two official plugins are available:
+Users can search or speak what they need, view the indoor station map and get directions to their destination. The project also includes emergency assistance and a staff assistance system.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Development Progress
 
-## React Compiler
+25 September 2026 — Day 1
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Today was the first development day of RailAssist. The main project structure was set up and the initial user interface was created based on the planned station assistance flow. The focus was on building a working foundation for the features that will be added next.
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+- Set up the React + Vite project
+- Created the RailAssist Home Screen
+- Added station information and current location section
+- Added destination search and assistance options
+- Added voice request and station directory sections
+- Added basic navigation between screens
+- Set up Git for version control
+- Created the first project commit
+- Created and connected the public GitHub repository
+- Pushed the project to GitHub
