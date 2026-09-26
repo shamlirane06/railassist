@@ -1,0 +1,381 @@
+/* ════════════════════════════════════════════════════
+   StationMap.css — RailAssist Indoor Station Map
+   Mobile-first, high-contrast, elderly-friendly
+════════════════════════════════════════════════════ */
+
+/* ── Page shell ─────────────────────────────────── */
+.smap {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: #f4f5f7;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────── */
+.smap-header {
+  background: #1a3a5c;
+  padding: 10px 16px 9px;
+  flex-shrink: 0;
+}
+.smap-header-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  line-height: 1.2;
+}
+.smap-header-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+  margin: 2px 0 0;
+  letter-spacing: 0.5px;
+}
+
+/* ── Search bar ─────────────────────────────────── */
+.smap-searchbar {
+  background: #fff;
+  border-bottom: 1.5px solid #e2e5ea;
+  padding: 8px 12px 0;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 20;
+}
+.smap-search-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f4f5f7;
+  border: 1.5px solid #e2e5ea;
+  border-radius: 10px;
+  padding: 0 10px;
+  height: 44px;
+  margin-bottom: 8px;
+  transition: border-color 0.15s;
+}
+.smap-search-inner:focus-within {
+  border-color: #CC2027;
+  background: #fff;
+}
+.smap-search-icon {
+  color: #8a94a0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.smap-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: #1a1a2e;
+  background: transparent;
+}
+.smap-search-input::placeholder { color: #a0aab4; }
+.smap-search-input::-webkit-search-cancel-button { display: none; }
+.smap-search-clear {
+  display: flex;
+  align-items: center;
+  color: #8a94a0;
+  padding: 4px;
+  border-radius: 50%;
+  transition: background 0.1s;
+}
+.smap-search-clear:hover { background: #f0f0f0; }
+
+/* Search results dropdown */
+.smap-results {
+  list-style: none;
+  background: #fff;
+  border: 1.5px solid #e2e5ea;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 100%;
+  z-index: 50;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  padding: 0;
+  margin: 0;
+}
+.smap-result-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #1a1a2e;
+  border-bottom: 1px solid #f0f1f3;
+  text-align: left;
+  transition: background 0.1s;
+}
+.smap-result-btn:hover,
+.smap-result-btn:focus { background: #f4f5f7; outline: none; }
+.smap-results li:last-child .smap-result-btn { border-bottom: none; }
+.smap-result-tag {
+  font-size: 10px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.smap-result-name {
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+/* ── Map canvas ─────────────────────────────────── */
+.smap-canvas-wrap {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  background: #d8d2c8;
+  -webkit-overflow-scrolling: touch;
+}
+
+.smap-svg {
+  display: block;
+  width: 100%;
+  min-width: 580px;      /* ensures scrollability on small screens */
+  height: auto;
+  cursor: default;
+  user-select: none;
+}
+
+/* Clickable hit areas */
+.smap-hit {
+  cursor: pointer;
+}
+.smap-hit:hover > rect:first-child,
+.smap-hit:focus > rect:first-child {
+  filter: brightness(0.94);
+}
+.smap-hit:focus {
+  outline: none;
+}
+.smap-hit:focus-visible > rect:first-child {
+  stroke: #CC2027 !important;
+  stroke-width: 3px !important;
+}
+
+/* ── Map controls overlay ────────────────────────── */
+.smap-controls {
+  position: absolute;
+  bottom: 16px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10;
+}
+.smap-ctrl {
+  width: 42px;
+  height: 42px;
+  background: #fff;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a3a5c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: background 0.1s, transform 0.1s;
+  line-height: 1;
+}
+.smap-ctrl--sm {
+  font-size: 16px;
+  color: #5a6473;
+}
+.smap-ctrl:hover   { background: #f0f4ff; transform: scale(1.05); }
+.smap-ctrl:active  { transform: scale(0.96); }
+.smap-ctrl:focus-visible {
+  outline: 3px solid #CC2027;
+  outline-offset: 2px;
+}
+
+/* ── Legend ─────────────────────────────────────── */
+.smap-legend {
+  background: #fff;
+  border-top: 1px solid #e2e5ea;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.smap-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #555;
+  white-space: nowrap;
+}
+.smap-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.smap-legend-dot--here { background: #2563eb; }
+.smap-legend-dot--dest { background: #16a34a; }
+.smap-legend-sym {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a3a5c;
+  min-width: 16px;
+  text-align: center;
+}
+.smap-legend-sym--dest { color: #16a34a; }
+
+/* ── Location info panel ────────────────────────── */
+.smap-panel {
+  background: #fff;
+  border-top: 3px solid #CC2027;
+  padding: 14px 16px 12px;
+  flex-shrink: 0;
+  max-height: 42vh;
+  overflow-y: auto;
+  animation: slideUp 0.2s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.smap-panel-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.smap-panel-info { flex: 1; }
+.smap-panel-type {
+  font-size: 11px;
+  color: #8a94a0;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 0 0 2px;
+  font-weight: 600;
+}
+.smap-panel-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a1a2e;
+  margin: 0 0 4px;
+  line-height: 1.2;
+}
+.smap-panel-access {
+  display: inline-block;
+  font-size: 12px;
+  color: #7e22ce;
+  background: #f5e8ff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.smap-panel-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f4f5f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5a6473;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+.smap-panel-close:hover { background: #e2e5ea; }
+.smap-panel-close:focus-visible { outline: 3px solid #CC2027; outline-offset: 2px; }
+
+.smap-panel-desc {
+  font-size: 13.5px;
+  color: #4a5568;
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+.smap-panel-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.smap-btn-dest {
+  flex: 1;
+  padding: 13px 16px;
+  background: #CC2027;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 10px;
+  text-align: center;
+  min-height: 48px;
+  transition: background 0.15s;
+}
+.smap-btn-dest:hover  { background: #b01c21; }
+.smap-btn-dest:active { background: #921618; }
+.smap-btn-dest:focus-visible { outline: 3px solid #1a3a5c; outline-offset: 2px; }
+
+.smap-btn-clear {
+  padding: 13px 16px;
+  background: #f4f5f7;
+  color: #CC2027;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1.5px solid #CC2027;
+  min-height: 48px;
+  transition: background 0.15s;
+}
+.smap-btn-clear:hover { background: #fde8e8; }
+
+/* ── Destination reminder bar ───────────────────── */
+.smap-dest-bar {
+  background: #dcfce7;
+  border-top: 2px solid #16a34a;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.smap-dest-label {
+  font-size: 13px;
+  color: #14532d;
+}
+.smap-dest-label strong { font-weight: 700; }
+.smap-dest-clear {
+  font-size: 13px;
+  font-weight: 600;
+  color: #16a34a;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+/* ── Responsive ─────────────────────────────────── */
+@media (min-width: 600px) {
+  .smap-header-title { font-size: 18px; }
+  .smap-svg { min-width: 100%; }
+  .smap-legend { gap: 20px; padding: 8px 20px; }
+  .smap-legend-item { font-size: 12px; }
+  .smap-panel { max-height: 35vh; }
+}
+
+@media (min-width: 900px) {
+  .smap { flex-direction: column; }
+  .smap-canvas-wrap { flex: 1; }
+  .smap-svg { min-width: unset; width: 100%; }
+  .smap-ctrl { width: 46px; height: 46px; }
+}
