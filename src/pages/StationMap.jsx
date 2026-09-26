@@ -30,6 +30,27 @@ const TYPE_LABELS = {
 
 const PLATFORM_IDS = new Set(PLATFORM_STRIPS.map(p => p.id))
 
+// ── Category-based destination picker ──────────────────────────────────────
+const CATEGORIES = [
+  { key: 'platforms',   label: 'Platforms',  icon: '🚆', ids: ['platform-1','platform-2','platform-3','platform-4','platform-5','platform-6','platform-7'] },
+  { key: 'exits',       label: 'Exits',      icon: '🚪', ids: ['exit-a','exit-b','main-entrance'] },
+  { key: 'toilets',     label: 'Toilets',    icon: '🚻', ids: ['accessible-toilet','normal-toilet'] },
+  { key: 'lifts',       label: 'Lifts',      icon: '⇅',  ids: ['elevator'] },
+  { key: 'help',        label: 'Help Desk',  icon: '?',  ids: ['help-desk'] },
+  { key: 'facilities',  label: 'Facilities', icon: '🏛',  ids: ['ticket-counter','waiting-area','escalator','stairs','info-desk','staff-point'] },
+]
+
+// Search aliases so "lift" matches "Elevator", etc.
+const SEARCH_ALIASES = {
+  'elevator':         ['lift', 'lifts'],
+  'accessible-toilet':['accessible', 'disabled'],
+  'normal-toilet':    ['washroom', 'bathroom', 'loo', 'restroom'],
+  'main-entrance':    ['entrance', 'gate', 'door'],
+  'info-desk':        ['information'],
+  'help-desk':        ['porter', 'assistance'],
+  'staff-point':      ['security', 'guard'],
+}
+
 // ── Inline SVG icons ───────────────────────────────────────────────────────
 const IconSearch = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -42,6 +63,12 @@ const IconClose = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+)
+const IconBack = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+    <polyline points="15 18 9 12 15 6"/>
   </svg>
 )
 
@@ -66,6 +93,8 @@ export default function StationMap() {
   const [destId, setDestId]     = useState(null)   // user-confirmed destination
   const [query, setQuery]       = useState('')
   const [results, setResults]   = useState([])
+  const [showPicker, setShowPicker] = useState(false)  // category picker open
+  const [activeCat, setActiveCat]   = useState(null)   // which category is expanded
 
   // ── Zoom / pan ───────────────────────────────────────────────────────────
   const zoomIn = useCallback(() =>
@@ -92,22 +121,47 @@ export default function StationMap() {
     setQuery(q)
     if (!q.trim()) { setResults([]); return }
     const lower = q.toLowerCase()
-    const found = LOCATIONS.filter(l =>
-      l.name.toLowerCase().includes(lower) ||
-      (l.shortName || '').toLowerCase().includes(lower) ||
-      l.type.toLowerCase().includes(lower) ||
-      (l.description || '').toLowerCase().includes(lower)
-    ).slice(0, 6)
+    const found = LOCATIONS.filter(l => {
+      if (l.name.toLowerCase().includes(lower)) return true
+      if ((l.shortName || '').toLowerCase().includes(lower)) return true
+      if (l.type.toLowerCase().includes(lower)) return true
+      if ((l.description || '').toLowerCase().includes(lower)) return true
+      // Check aliases
+      const aliases = SEARCH_ALIASES[l.id] || []
+      if (aliases.some(a => a.includes(lower) || lower.includes(a))) return true
+      return false
+    }).slice(0, 8)
     setResults(found)
+    // When typing, hide category picker and show text results
+    setActiveCat(null)
   }, [])
 
   const pickResult = useCallback((loc) => {
     setQuery(loc.name)
     setResults([])
-    handleSelect(loc.id)
-  }, [handleSelect])
+    setShowPicker(false)
+    setActiveCat(null)
+    // Auto-set as destination AND zoom to it
+    setDestId(loc.id)
+    setSelected(null)
+    setVb(clampVb({ x: loc.x - 200, y: loc.y - 130, w: 400, h: 280 }))
+  }, [])
 
-  const clearSearch = useCallback(() => { setQuery(''); setResults([]) }, [])
+  const clearSearch = useCallback(() => {
+    setQuery('')
+    setResults([])
+    setShowPicker(false)
+    setActiveCat(null)
+  }, [])
+
+  const clearDest = useCallback(() => {
+    setDestId(null)
+    setQuery('')
+    setResults([])
+    setShowPicker(false)
+    setActiveCat(null)
+    setVb(VB_DEFAULT)
+  }, [])
 
   // ── Derived ─────────────────────────────────────────────────────────────
   const viewBoxStr = `${vb.x} ${vb.y} ${vb.w} ${vb.h}`
@@ -125,26 +179,29 @@ export default function StationMap() {
         </div>
       </div>
 
-      {/* ── Search bar ── */}
+      {/* ── Search bar + category picker ── */}
       <div className="smap-searchbar">
         <div className="smap-search-inner">
           <span className="smap-search-icon"><IconSearch /></span>
           <input
             className="smap-search-input"
             type="search"
-            placeholder="Search station locations…"
+            placeholder="Search destination…"
             value={query}
             onChange={e => handleSearch(e.target.value)}
-            aria-label="Search station locations"
+            onFocus={() => { if (!query) setShowPicker(true) }}
+            aria-label="Search destination"
             autoComplete="off"
           />
-          {query && (
+          {(query || showPicker) && (
             <button className="smap-search-clear" onClick={clearSearch} aria-label="Clear search">
               <IconClose />
             </button>
           )}
         </div>
-        {results.length > 0 && (
+
+        {/* Text search results */}
+        {query && results.length > 0 && (
           <ul className="smap-results" role="listbox" aria-label="Search results">
             {results.map(r => (
               <li key={r.id} role="option">
@@ -155,6 +212,64 @@ export default function StationMap() {
               </li>
             ))}
           </ul>
+        )}
+
+        {/* No results message */}
+        {query && query.trim() && results.length === 0 && (
+          <div className="smap-no-results">No destination found</div>
+        )}
+
+        {/* Category picker — only when query is empty and picker is open */}
+        {showPicker && !query && (
+          <div className="smap-picker" role="listbox" aria-label="Destination categories">
+            {!activeCat ? (
+              /* ── Category grid ── */
+              <div className="smap-cat-grid">
+                {CATEGORIES.map(cat => (
+                  <button
+                    key={cat.key}
+                    className="smap-cat-btn"
+                    onClick={() => setActiveCat(cat.key)}
+                    aria-label={cat.label}
+                  >
+                    <span className="smap-cat-icon">{cat.icon}</span>
+                    <span className="smap-cat-label">{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              /* ── Location list inside a category ── */
+              <div className="smap-cat-list">
+                <button
+                  className="smap-cat-back"
+                  onClick={() => setActiveCat(null)}
+                  aria-label="Back to categories"
+                >
+                  <IconBack />
+                  <span>All Categories</span>
+                </button>
+                <p className="smap-cat-heading">
+                  {CATEGORIES.find(c => c.key === activeCat)?.label}
+                </p>
+                {CATEGORIES.find(c => c.key === activeCat)?.ids.map(locId => {
+                  const loc = LOCATIONS.find(l => l.id === locId)
+                  if (!loc) return null
+                  return (
+                    <button
+                      key={loc.id}
+                      className="smap-cat-item"
+                      onClick={() => pickResult(loc)}
+                    >
+                      <span className="smap-cat-item-name">{loc.name}</span>
+                      {loc.accessible && (
+                        <span className="smap-cat-item-access">Accessible</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -577,15 +692,26 @@ export default function StationMap() {
         </div>
       )}
 
-      {/* Destination reminder bar */}
+      {/* ── Destination summary card ── */}
       {destId && !selected && (
-        <div className="smap-dest-bar">
-          <span className="smap-dest-label">
-            Destination: <strong>{LOCATIONS.find(l => l.id === destId)?.name}</strong>
-          </span>
-          <button className="smap-dest-clear" onClick={() => setDestId(null)} aria-label="Clear destination">
-            Clear
-          </button>
+        <div className="smap-dest-card" role="region" aria-label="Destination summary">
+          <p className="smap-dest-card-heading">Destination</p>
+          <h3 className="smap-dest-card-name">{destLoc?.name}</h3>
+          <p className="smap-dest-card-type">
+            {TYPE_LABELS[destLoc?.type] || destLoc?.type}
+          </p>
+          {destLoc?.accessible && (
+            <p className="smap-dest-row-access">♿ Wheelchair accessible</p>
+          )}
+          <div className="smap-dest-actions">
+            <button
+              className="smap-btn-dest-clear"
+              onClick={clearDest}
+              aria-label="Clear destination"
+            >
+              Clear
+            </button>
+          </div>
         </div>
       )}
 
