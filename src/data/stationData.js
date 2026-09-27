@@ -30,6 +30,14 @@ export const CURRENT_LOCATION = {
   y: 293,   // SVG y: centre of Platform 2 strip
 }
 
+// Physical assistance points reference the canonical station locations below.
+export const HELP_POINTS = [
+  { id: 'hp-1', name: 'Help Point 1', locId: 'help-desk' },
+  { id: 'hp-2', name: 'Help Point 2', locId: 'platform-2' },
+  { id: 'hp-3', name: 'Help Point 3', locId: 'platform-5' },
+  { id: 'hp-4', name: 'Help Point 4', locId: 'main-entrance' },
+]
+
 // ── All interactive locations ──────────────────────────────────────────────
 // x, y = SVG centre of the location box/area
 // svgRect = { x, y, w, h } for click hit area
@@ -236,7 +244,7 @@ export const LOCATIONS = [
   },
   {
     id: 'normal-toilet',
-    name: 'Toilet (WC)',
+    name: 'Normal Toilet',
     shortName: 'WC',
     type: 'toilet',
     level: 'concourse',

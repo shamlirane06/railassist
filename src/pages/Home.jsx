@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
+import { LOCATIONS } from '../data/stationData'
 import './Home.css'
 
 /* ── Inline SVG icons ─────────────────────────── */
@@ -99,10 +100,10 @@ const IconClear = () => (
 
 /* ── Common places data ───────────────────────── */
 const COMMON_PLACES = [
-  { id: 'platforms', label: 'Platforms',   Icon: IconTrain,  path: '/search?q=platform'  },
-  { id: 'toilets',   label: 'Toilets',     Icon: IconToilet, path: '/search?q=toilet'    },
-  { id: 'lifts',     label: 'Lifts',       Icon: IconLift,   path: '/search?q=lift'      },
-  { id: 'exits',     label: 'Exits',       Icon: IconExit,   path: '/search?q=exit'      },
+  { id: 'platforms', label: 'Platforms', Icon: IconTrain, matches: location => location.type === 'platform' },
+  { id: 'toilets', label: 'Toilets', Icon: IconToilet, matches: location => location.type === 'toilet' || location.type === 'toilet-accessible' },
+  { id: 'lifts', label: 'Lifts', Icon: IconLift, matches: location => location.type === 'elevator' },
+  { id: 'exits', label: 'Exits', Icon: IconExit, matches: location => location.type === 'exit' || location.type === 'entrance' },
 ]
 
 /* ═══════════════════════════════════════════════
@@ -114,6 +115,7 @@ export default function Home() {
   const [query, setQuery]           = useState('')
   const [voiceActive, setVoiceActive] = useState(false)
   const [showLocation, setShowLocation] = useState(false)
+  const [commonCategory, setCommonCategory] = useState(null)
   const inputRef = useRef(null)
 
   /* ── voice toggle (UI only – no real speech API yet) ── */
@@ -260,11 +262,12 @@ export default function Home() {
         <section className="home-places-section" aria-label="Common places">
           <h2 className="home-section__heading">Common places</h2>
           <div className="home-places__grid" role="list">
-            {COMMON_PLACES.map(({ id, label, Icon, path }) => (
+            {COMMON_PLACES.map(({ id, label, Icon }) => (
               <button
                 key={id}
                 className="home-place__card"
-                onClick={() => navigate(path)}
+                onClick={() => setCommonCategory(current => current === id ? null : id)}
+                aria-expanded={commonCategory === id}
                 aria-label={label}
                 role="listitem"
               >
@@ -273,6 +276,23 @@ export default function Home() {
               </button>
             ))}
           </div>
+          {commonCategory && (() => {
+            const category = COMMON_PLACES.find(item => item.id === commonCategory)
+            const destinations = LOCATIONS.filter(category.matches)
+            return (
+              <div className="home-common-results" aria-label={`${category.label} destinations`}>
+                {destinations.map(location => (
+                  <button
+                    className="home-common-result"
+                    key={location.id}
+                    onClick={() => navigate('/map', { state: { destinationId: location.id } })}
+                  >
+                    {location.name}
+                  </button>
+                ))}
+              </div>
+            )
+          })()}
         </section>
 
         {/* ══════════ 7. HELP ══════════ */}

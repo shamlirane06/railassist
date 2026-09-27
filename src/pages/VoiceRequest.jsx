@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
-import { STATION_META, CURRENT_LOCATION, LOCATIONS } from '../data/stationData'
+import { STATION_META, CURRENT_LOCATION, LOCATIONS, HELP_POINTS } from '../data/stationData'
 import './HelpPoints.css'
 
 // ── Help type options ──────────────────────────────────────────────────────
@@ -19,14 +19,6 @@ const LOCATION_CHOICES = LOCATIONS.filter(l =>
   ['platform','entrance','facility','help','information'].includes(l.type) ||
   l.id === 'waiting-area' || l.id === 'ticket-counter'
 ).map(l => ({ id: l.id, label: l.name }))
-
-// ── Help points at the station ─────────────────────────────────────────────
-const HELP_POINTS = [
-  { id: 'hp-1', name: 'Help Point 1', location: 'Main Concourse',  locId: 'help-desk' },
-  { id: 'hp-2', name: 'Help Point 2', location: 'Platform 2',      locId: 'platform-2' },
-  { id: 'hp-3', name: 'Help Point 3', location: 'Platform 5',      locId: 'platform-5' },
-  { id: 'hp-4', name: 'Help Point 4', location: 'Main Entrance',   locId: 'main-entrance' },
-]
 
 // ── Flow steps ─────────────────────────────────────────────────────────────
 const STEP_HOME     = 'home'
@@ -449,7 +441,9 @@ export default function VoiceRequest() {
               >
                 <div className="help-point-info">
                   <span className="help-point-name">{hp.name}</span>
-                  <span className="help-point-loc">{hp.location}</span>
+                  <span className="help-point-loc">
+                    {LOCATIONS.find(location => location.id === hp.locId)?.name}
+                  </span>
                 </div>
                 <span className="help-point-arrow">›</span>
               </button>

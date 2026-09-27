@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import {
   STATION_META,
@@ -32,12 +33,12 @@ const PLATFORM_IDS = new Set(PLATFORM_STRIPS.map(p => p.id))
 
 // ── Category-based destination picker ──────────────────────────────────────
 const CATEGORIES = [
-  { key: 'platforms',   label: 'Platforms',  icon: '🚆', ids: ['platform-1','platform-2','platform-3','platform-4','platform-5','platform-6','platform-7'] },
-  { key: 'exits',       label: 'Exits',      icon: '🚪', ids: ['exit-a','exit-b','main-entrance'] },
-  { key: 'toilets',     label: 'Toilets',    icon: '🚻', ids: ['accessible-toilet','normal-toilet'] },
-  { key: 'lifts',       label: 'Lifts',      icon: '⇅',  ids: ['elevator'] },
-  { key: 'help',        label: 'Help Desk',  icon: '?',  ids: ['help-desk'] },
-  { key: 'facilities',  label: 'Facilities', icon: '🏛',  ids: ['ticket-counter','waiting-area','escalator','stairs','info-desk','staff-point'] },
+  { key: 'platforms', label: 'Platforms', icon: '🚆', matches: location => location.type === 'platform' },
+  { key: 'exits', label: 'Exits', icon: '🚪', matches: location => location.type === 'exit' || location.type === 'entrance' },
+  { key: 'toilets', label: 'Toilets', icon: '🚻', matches: location => location.type === 'toilet' || location.type === 'toilet-accessible' },
+  { key: 'lifts', label: 'Lifts', icon: '⇅', matches: location => location.type === 'elevator' },
+  { key: 'help', label: 'Help Desk', icon: '?', matches: location => location.type === 'help' },
+  { key: 'facilities', label: 'Facilities', icon: '🏛', matches: location => ['facility', 'information', 'escalator', 'stairs'].includes(location.type) },
 ]
 
 // Search aliases so "lift" matches "Elevator", etc.
@@ -88,6 +89,7 @@ function clampVb({ x, y, w, h }) {
 
 // ══════════════════════════════════════════════════════════════════════════
 export default function StationMap() {
+  const location = useLocation()
   const [vb, setVb]             = useState(VB_DEFAULT)
   const [selected, setSelected] = useState(null)   // location shown in info panel
   const [destId, setDestId]     = useState(null)   // user-confirmed destination
@@ -146,6 +148,13 @@ export default function StationMap() {
     setSelected(null)
     setVb(clampVb({ x: loc.x - 200, y: loc.y - 130, w: 400, h: 280 }))
   }, [])
+
+  useEffect(() => {
+    const destinationId = location.state?.destinationId
+    if (!destinationId) return
+    const destination = LOCATIONS.find(item => item.id === destinationId)
+    if (destination) pickResult(destination)
+  }, [location.key, location.state, pickResult])
 
   const clearSearch = useCallback(() => {
     setQuery('')
@@ -215,7 +224,7 @@ export default function StationMap() {
         )}
 
         {/* No results message */}
-        {query && query.trim() && results.length === 0 && (
+        {query && query.trim() && results.length === 0 && !destId && (
           <div className="smap-no-results">No destination found</div>
         )}
 
@@ -251,9 +260,7 @@ export default function StationMap() {
                 <p className="smap-cat-heading">
                   {CATEGORIES.find(c => c.key === activeCat)?.label}
                 </p>
-                {CATEGORIES.find(c => c.key === activeCat)?.ids.map(locId => {
-                  const loc = LOCATIONS.find(l => l.id === locId)
-                  if (!loc) return null
+                {LOCATIONS.filter(CATEGORIES.find(c => c.key === activeCat)?.matches || (() => false)).map(loc => {
                   return (
                     <button
                       key={loc.id}
