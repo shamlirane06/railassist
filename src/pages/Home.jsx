@@ -156,7 +156,7 @@ export default function Home() {
           </div>
         </div>
         <div className="home-header__actions">
-          <button className="home-header__btn" aria-label="Accessibility settings">
+          <button className="home-header__btn" aria-label="Accessibility settings" onClick={() => navigate('/accessibility')}>
             <IconAccessibility />
           </button>
           <button className="home-header__btn home-header__btn--filled" aria-label="Profile">

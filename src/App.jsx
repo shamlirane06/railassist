@@ -7,6 +7,7 @@ import VoiceRequest from './pages/VoiceRequest'
 import Navigation from './pages/Navigation'
 import Emergency from './pages/Emergency'
 import StaffDashboard from './pages/StaffDashboard'
+import Accessibility from './pages/Accessibility'
 
 function App() {
   return (
@@ -19,9 +20,11 @@ function App() {
         <Route path="navigation" element={<Navigation />} />
         <Route path="emergency" element={<Emergency />} />
         <Route path="staff" element={<StaffDashboard />} />
+        <Route path="accessibility" element={<Accessibility />} />
       </Route>
     </Routes>
   )
 }
 
 export default App
+
