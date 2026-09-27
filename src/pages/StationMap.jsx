@@ -1,748 +1,256 @@
-import { useState, useCallback, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
-import {
-  STATION_META,
-  LOCATIONS,
-  PLATFORM_STRIPS,
-  TRACK_STRIPS,
-  COACH_LABELS,
-  CURRENT_LOCATION,
-} from '../data/stationData'
+import Icon from '../components/Icon'
+import StationMapCanvas from '../components/map/StationMapCanvas'
+import { useMapCamera } from '../components/map/useMapCamera'
+import { STATION_META, LOCATIONS, CURRENT_LOCATION } from '../data/stationData'
+import { getLocationIcon, getLocationTone, getTypeLabel } from '../data/locationMeta'
 import './StationMap.css'
 
-// ── Constants ──────────────────────────────────────────────────────────────
-const VB_DEFAULT  = { x: 0,   y: 0,   w: 900, h: 620 }
-const VB_RECENTER = { x: 150, y: 180, w: 320, h: 220 } // centred on Platform 2
-
-const TYPE_LABELS = {
-  platform:         'Platform',
-  exit:             'Exit',
-  entrance:         'Main Entrance',
-  facility:         'Facility',
-  information:      'Information',
-  help:             'Help Desk',
-  elevator:         'Elevator',
-  stairs:           'Stairs',
-  escalator:        'Escalator',
-  toilet:           'Toilet',
-  'toilet-accessible': 'Accessible Toilet',
-}
-
-const PLATFORM_IDS = new Set(PLATFORM_STRIPS.map(p => p.id))
-
-// ── Category-based destination picker ──────────────────────────────────────
 const CATEGORIES = [
-  { key: 'platforms', label: 'Platforms', icon: 'train', matches: location => location.type === 'platform' },
-  { key: 'exits', label: 'Exits', icon: 'exit', matches: location => location.type === 'exit' || location.type === 'entrance' },
-  { key: 'toilets', label: 'Toilets', icon: 'toilet', matches: location => location.type === 'toilet' || location.type === 'toilet-accessible' },
-  { key: 'lifts', label: 'Lifts', icon: 'lift', matches: location => location.type === 'elevator' },
-  { key: 'help', label: 'Help Desk', icon: 'help', matches: location => location.type === 'help' },
-  { key: 'facilities', label: 'Facilities', icon: 'building', matches: location => ['facility', 'information', 'escalator', 'stairs'].includes(location.type) },
+  { key: 'platforms', label: 'Platforms', icon: 'train', matches: l => l.type === 'platform' },
+  { key: 'exits', label: 'Exits', icon: 'exit', matches: l => l.type === 'exit' || l.type === 'entrance' },
+  { key: 'toilets', label: 'Toilets', icon: 'toilet', matches: l => l.type === 'toilet' || l.type === 'toilet-accessible' },
+  { key: 'lifts', label: 'Lifts', icon: 'lift', matches: l => l.type === 'elevator' },
+  { key: 'help', label: 'Help desk', icon: 'help', matches: l => l.type === 'help' },
+  { key: 'facilities', label: 'Facilities', icon: 'building', matches: l => ['facility', 'information', 'escalator', 'stairs'].includes(l.type) },
 ]
 
-// Search aliases so "lift" matches "Elevator", etc.
 const SEARCH_ALIASES = {
-  'elevator':         ['lift', 'lifts'],
-  'accessible-toilet':['accessible', 'disabled'],
-  'normal-toilet':    ['washroom', 'bathroom', 'loo', 'restroom'],
-  'main-entrance':    ['entrance', 'gate', 'door'],
-  'info-desk':        ['information'],
-  'help-desk':        ['porter', 'assistance'],
-  'staff-point':      ['security', 'guard'],
+  elevator: ['lift', 'lifts'],
+  'accessible-toilet': ['accessible', 'disabled'],
+  'normal-toilet': ['washroom', 'bathroom', 'loo', 'restroom'],
+  'main-entrance': ['entrance', 'gate', 'door'],
+  'info-desk': ['information'],
+  'help-desk': ['porter', 'assistance'],
+  'staff-point': ['security', 'guard'],
 }
 
-// ── Inline SVG icons ───────────────────────────────────────────────────────
-const IconSearch = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-    <circle cx="11" cy="11" r="8"/>
-    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-  </svg>
-)
-const IconClose = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
-    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-)
-const IconBack = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
-    <polyline points="15 18 9 12 15 6"/>
-  </svg>
-)
-const MapCategoryIcon = ({ name }) => {
-  const shapes = {
-    train: <><rect x="5" y="3" width="14" height="16" rx="3"/><path d="M8 19l-2 3M16 19l2 3M5 10h14"/><circle cx="9" cy="15" r="1"/><circle cx="15" cy="15" r="1"/></>,
-    exit: <><path d="M13 4H5v16h8M10 12h10m-4-4 4 4-4 4"/></>,
-    toilet: <><path d="M5 10h14l-2 8H7l-2-8ZM8 18v3m8-3v3M8 6a2 2 0 1 0 4 0V3H8v3Zm4 0a2 2 0 1 0 4 0V3h-4v3Z"/></>,
-    lift: <><rect x="5" y="3" width="14" height="18" rx="2"/><path d="m9 9 3-3 3 3m-6 6 3 3 3-3"/></>,
-    help: <><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.7 1.5c-.8 1-2.2 1.2-2.2 2.8m0 3h.01"/></>,
-    building: <><path d="M4 21V5l8-2 8 2v16M8 8h1m6 0h1M8 12h1m6 0h1M10 21v-5h4v5"/></>,
-  }
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{shapes[name]}</svg>
+function searchLocations(q) {
+  const lower = q.trim().toLowerCase()
+  if (!lower) return []
+  return LOCATIONS.filter(l =>
+    l.name.toLowerCase().includes(lower) ||
+    (l.shortName || '').toLowerCase().includes(lower) ||
+    l.type.toLowerCase().includes(lower) ||
+    (l.description || '').toLowerCase().includes(lower) ||
+    (SEARCH_ALIASES[l.id] || []).some(a => a.includes(lower) || lower.includes(a)),
+  ).slice(0, 8)
 }
 
-// ── Helper ─────────────────────────────────────────────────────────────────
-function clampVb({ x, y, w, h }) {
-  const minW = 200, minH = 138
-  const maxW = 900, maxH = 620
-  const cw = Math.max(minW, Math.min(maxW, w))
-  const ch = Math.max(minH, Math.min(maxH, h))
-  return {
-    x: Math.max(0, Math.min(900 - cw, x)),
-    y: Math.max(0, Math.min(620 - ch, y)),
-    w: cw,
-    h: ch,
-  }
+function LocationResult({ location, onClick }) {
+  return (
+    <button type="button" className="smap-result" onClick={onClick}>
+      <span className={`tile-icon tile-icon--${getLocationTone(location)}`} aria-hidden="true">
+        <Icon name={getLocationIcon(location)} size={20} />
+      </span>
+      <span className="list-row__body">
+        <span className="smap-result__title">{location.name}</span>
+        <span className="smap-result__desc">{getTypeLabel(location)}{location.accessible ? ' · Step-free' : ''}</span>
+      </span>
+      <Icon name="chevronRight" size={18} className="list-row__chevron" />
+    </button>
+  )
 }
 
-// ══════════════════════════════════════════════════════════════════════════
 export default function StationMap() {
-  const location = useLocation()
-  const [vb, setVb]             = useState(VB_DEFAULT)
-  const [selected, setSelected] = useState(null)   // location shown in info panel
-  const [destId, setDestId]     = useState(null)   // user-confirmed destination
-  const [query, setQuery]       = useState('')
-  const [results, setResults]   = useState([])
-  const [showPicker, setShowPicker] = useState(false)  // category picker open
-  const [activeCat, setActiveCat]   = useState(null)   // which category is expanded
+  const routerLocation = useLocation()
+  const navigate = useNavigate()
+  const sheetRef = useRef(null)
+  const camera = useMapCamera({ occluderRef: sheetRef, home: CURRENT_LOCATION })
+  const { focus } = camera
+  const [selected, setSelected] = useState(null)
+  const [destId, setDestId] = useState(null)
+  const [query, setQuery] = useState('')
+  const [showPicker, setShowPicker] = useState(false)
+  const [activeCat, setActiveCat] = useState(null)
 
-  // ── Zoom / pan ───────────────────────────────────────────────────────────
-  const zoomIn = useCallback(() =>
-    setVb(p => clampVb({ x: p.x + p.w * 0.125, y: p.y + p.h * 0.125, w: p.w * 0.75, h: p.h * 0.75 }))
-  , [])
-  const zoomOut = useCallback(() =>
-    setVb(p => clampVb({ x: p.x - p.w * 0.1667, y: p.y - p.h * 0.1667, w: p.w * 1.3333, h: p.h * 1.3333 }))
-  , [])
-  const resetMap = useCallback(() => { setVb(VB_DEFAULT); setSelected(null) }, [])
-  const recenter = useCallback(() => setVb(VB_RECENTER), [])
+  const results = searchLocations(query)
+  const destLoc = destId ? LOCATIONS.find(l => l.id === destId) : null
+  const category = CATEGORIES.find(c => c.key === activeCat)
 
-  // ── Location selection ───────────────────────────────────────────────────
-  const handleSelect = useCallback((id) => {
+  const resetMap = () => { camera.overview(); setSelected(null) }
+  const recenter = () => camera.focus(CURRENT_LOCATION)
+
+  const handleSelect = useCallback(id => {
     const loc = LOCATIONS.find(l => l.id === id)
     setSelected(loc || null)
-    // Zoom to area if not already visible
-    if (loc) {
-      setVb(clampVb({ x: loc.x - 200, y: loc.y - 130, w: 400, h: 280 }))
-    }
-  }, [])
+    setShowPicker(false)
+    if (loc) focus(loc)
+  }, [focus])
 
-  // ── Search ───────────────────────────────────────────────────────────────
-  const handleSearch = useCallback((q) => {
-    setQuery(q)
-    if (!q.trim()) { setResults([]); return }
-    const lower = q.toLowerCase()
-    const found = LOCATIONS.filter(l => {
-      if (l.name.toLowerCase().includes(lower)) return true
-      if ((l.shortName || '').toLowerCase().includes(lower)) return true
-      if (l.type.toLowerCase().includes(lower)) return true
-      if ((l.description || '').toLowerCase().includes(lower)) return true
-      // Check aliases
-      const aliases = SEARCH_ALIASES[l.id] || []
-      if (aliases.some(a => a.includes(lower) || lower.includes(a))) return true
-      return false
-    }).slice(0, 8)
-    setResults(found)
-    // When typing, hide category picker and show text results
-    setActiveCat(null)
-  }, [])
-
-  const pickResult = useCallback((loc) => {
-    setQuery(loc.name)
-    setResults([])
+  const pickResult = useCallback(loc => {
+    setQuery('')
     setShowPicker(false)
     setActiveCat(null)
-    // Auto-set as destination AND zoom to it
     setDestId(loc.id)
     setSelected(null)
-    setVb(clampVb({ x: loc.x - 200, y: loc.y - 130, w: 400, h: 280 }))
-  }, [])
+    focus(loc)
+  }, [focus])
 
   useEffect(() => {
-    const destinationId = location.state?.destinationId
+    const destinationId = routerLocation.state?.destinationId
     if (!destinationId) return
     const destination = LOCATIONS.find(item => item.id === destinationId)
     if (destination) pickResult(destination)
-  }, [location.key, location.state, pickResult])
+  }, [routerLocation.key, routerLocation.state, pickResult])
 
-  const clearSearch = useCallback(() => {
+  const closeSearch = () => {
     setQuery('')
-    setResults([])
     setShowPicker(false)
     setActiveCat(null)
-  }, [])
+  }
 
-  const clearDest = useCallback(() => {
+  const clearDest = () => {
     setDestId(null)
-    setQuery('')
-    setResults([])
-    setShowPicker(false)
-    setActiveCat(null)
-    setVb(VB_DEFAULT)
-  }, [])
+    closeSearch()
+  }
 
-  // ── Derived ─────────────────────────────────────────────────────────────
-  const viewBoxStr = `${vb.x} ${vb.y} ${vb.w} ${vb.h}`
-  const destLoc    = destId ? LOCATIONS.find(l => l.id === destId) : null
+  const searchOpen = showPicker || query.length > 0
+  const sheetLocation = selected || destLoc
+  const sheetIsDestination = !selected && destLoc
 
-  const focusDestination = useCallback(() => {
-    if (!destLoc) return
-    setVb(clampVb({ x: destLoc.x - 200, y: destLoc.y - 130, w: 400, h: 280 }))
-  }, [destLoc])
-
-  // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="smap">
-
-      {/* ── Page header ── */}
-      <div className="smap-header">
-        <div>
-          <h1 className="smap-header-title">{STATION_META.name}</h1>
-          <p className="smap-header-sub">Indoor Station Map — {STATION_META.code}</p>
-        </div>
-      </div>
-
-      {/* ── Search bar + category picker ── */}
-      <div className="smap-searchbar">
-        <div className="smap-search-inner">
-          <span className="smap-search-icon"><IconSearch /></span>
-          <input
-            className="smap-search-input"
-            type="search"
-            placeholder="Search destination…"
-            value={query}
-            onChange={e => handleSearch(e.target.value)}
-            onFocus={() => { if (!query) setShowPicker(true) }}
-            aria-label="Search destination"
-            autoComplete="off"
-          />
-          {(query || showPicker) && (
-            <button className="smap-search-clear" onClick={clearSearch} aria-label="Clear search">
-              <IconClose />
-            </button>
-          )}
+    <div className="screen smap">
+      <div className="smap-top">
+        <div className="smap-top__title">
+          <h1>{STATION_META.name}</h1>
+          <span className="smap-top__code">{STATION_META.code}</span>
         </div>
 
-        {/* Text search results */}
-        {query && results.length > 0 && (
-          <ul className="smap-results" role="listbox" aria-label="Search results">
-            {results.map(r => (
-              <li key={r.id} role="option">
-                <button className="smap-result-btn" onClick={() => pickResult(r)}>
-                  <span className="smap-result-name">{r.name}</span>
-                  <span className="smap-result-tag">{TYPE_LABELS[r.type] || r.type}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* No results message */}
-        {query && query.trim() && results.length === 0 && !destId && (
-          <div className="smap-no-results">No destination found</div>
-        )}
-
-        {/* Category picker — only when query is empty and picker is open */}
-        {showPicker && !query && (
-          <div className="smap-picker" role="listbox" aria-label="Destination categories">
-            {!activeCat ? (
-              /* ── Category grid ── */
-              <div className="smap-cat-grid">
-                {CATEGORIES.map(cat => (
-                  <button
-                    key={cat.key}
-                    className={`smap-cat-btn smap-cat-btn--${cat.key}`}
-                    onClick={() => setActiveCat(cat.key)}
-                    aria-label={cat.label}
-                  >
-                    <span className="smap-cat-icon"><MapCategoryIcon name={cat.icon} /></span>
-                    <span className="smap-cat-label">{cat.label}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              /* ── Location list inside a category ── */
-              <div className="smap-cat-list">
-                <button
-                  className="smap-cat-back"
-                  onClick={() => setActiveCat(null)}
-                  aria-label="Back to categories"
-                >
-                  <IconBack />
-                  <span>All Categories</span>
-                </button>
-                <p className="smap-cat-heading">
-                  {CATEGORIES.find(c => c.key === activeCat)?.label}
-                </p>
-                {LOCATIONS.filter(CATEGORIES.find(c => c.key === activeCat)?.matches || (() => false)).map(loc => {
-                  return (
-                    <button
-                      key={loc.id}
-                      className="smap-cat-item"
-                      onClick={() => pickResult(loc)}
-                    >
-                      <span className="smap-cat-item-name">{loc.name}</span>
-                      {loc.accessible && (
-                        <span className="smap-cat-item-access">Accessible</span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── Map canvas ── */}
-      <div className="smap-canvas-wrap">
-        <svg
-          viewBox={viewBoxStr}
-          className="smap-svg"
-          role="img"
-          aria-label="Central Junction indoor station floor plan"
-        >
-
-          {/* ════════════════════════════════════════
-              STATION SHELL
-          ════════════════════════════════════════ */}
-          {/* Outer ground */}
-          <rect x="0" y="0" width="900" height="620" fill="#e6ebef"/>
-          {/* Station floor */}
-          <rect x="10" y="10" width="880" height="600" fill="#fff" stroke="#83919f" strokeWidth="2.5" rx="3"/>
-
-
-          {/* ════════════════════════════════════════
-              CONCOURSE LEVEL (y: 12–204)
-          ════════════════════════════════════════ */}
-          <rect x="12" y="12" width="876" height="192" fill="#f0f4f7" stroke="#c5ced7" strokeWidth="1.5"/>
-            <text x="450" y="23" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="#536273" letterSpacing="2">
-            CONCOURSE LEVEL
-          </text>
-
-          {/* ── Exit A ── */}
-          <g className="smap-hit" onClick={() => handleSelect('exit-a')} role="button" aria-label="Exit A">
-            <rect x="12" y="12" width="75" height="65" fill={selected?.id === 'exit-a' ? '#CC2027' : '#1a3a5c'} rx="2"/>
-            <text x="49" y="37" textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">EXIT</text>
-            <text x="49" y="52" textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">A</text>
-            {/* door gap */}
-            <rect x="36" y="77" width="26" height="4" fill="none" stroke="#1a3a5c" strokeWidth="1.5"/>
-          </g>
-
-          {/* ── Exit B ── */}
-          <g className="smap-hit" onClick={() => handleSelect('exit-b')} role="button" aria-label="Exit B">
-            <rect x="820" y="12" width="68" height="65" fill={selected?.id === 'exit-b' ? '#CC2027' : '#1a3a5c'} rx="2"/>
-            <text x="854" y="37" textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">EXIT</text>
-            <text x="854" y="52" textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">B</text>
-          </g>
-
-          {/* ── Ticket Counter ── */}
-          <g className="smap-hit" onClick={() => handleSelect('ticket-counter')} role="button" aria-label="Ticket Counter">
-            <rect x="95" y="22" width="144" height="82" rx="3"
-                  fill={selected?.id === 'ticket-counter' ? '#fde8e8' : '#fff'}
-                  stroke={selected?.id === 'ticket-counter' ? '#CC2027' : '#b8c8d8'} strokeWidth={selected?.id === 'ticket-counter' ? 2 : 1}/>
-            {/* ticket graphic */}
-            <rect x="118" y="38" width="98" height="40" rx="2" fill="none" stroke="#CC2027" strokeWidth="1.5"/>
-            <line x1="148" y1="38" x2="148" y2="78" stroke="#CC2027" strokeWidth="1" strokeDasharray="3 3"/>
-            <rect x="152" y="42" width="58" height="6" rx="1" fill="#f0c8c8"/>
-            <rect x="152" y="53" width="42" height="6" rx="1" fill="#f0c8c8"/>
-            <text x="167" y="94" textAnchor="middle" fontSize="9" fontWeight="700" fill="#1a3a5c">TICKET COUNTER</text>
-          </g>
-
-          {/* ── Information Desk ── */}
-          <g className="smap-hit" onClick={() => handleSelect('info-desk')} role="button" aria-label="Information Desk">
-            <rect x="247" y="22" width="116" height="82" rx="3"
-                  fill={selected?.id === 'info-desk' ? '#fde8e8' : '#fff'}
-                  stroke={selected?.id === 'info-desk' ? '#CC2027' : '#b8c8d8'} strokeWidth={selected?.id === 'info-desk' ? 2 : 1}/>
-            <circle cx="305" cy="52" r="20" fill="none" stroke="#1a3a5c" strokeWidth="2"/>
-            <text x="305" y="45" textAnchor="middle" fontSize="20" fontWeight="900" fill="#1a3a5c">i</text>
-            <text x="305" y="94" textAnchor="middle" fontSize="9" fontWeight="700" fill="#1a3a5c">INFO DESK</text>
-          </g>
-
-          {/* ── Waiting Area ── */}
-          <g className="smap-hit" onClick={() => handleSelect('waiting-area')} role="button" aria-label="Waiting Area">
-            <rect x="371" y="22" width="164" height="82" rx="3"
-                  fill={selected?.id === 'waiting-area' ? '#fde8e8' : '#fff8e1'}
-                  stroke={selected?.id === 'waiting-area' ? '#CC2027' : '#e2a820'} strokeWidth="1.5"/>
-            {/* seat icons */}
-            {[0, 1, 2].map(i => (
-              <g key={i} transform={`translate(${402 + i * 40}, 38)`}>
-                <rect x="-12" y="0" width="24" height="9" rx="3" fill="#f59e0b" opacity="0.6"/>
-                <rect x="-14" y="9" width="28" height="32" rx="3" fill="#f59e0b" opacity="0.35"/>
-              </g>
-            ))}
-            <text x="453" y="94" textAnchor="middle" fontSize="9" fontWeight="700" fill="#92400e">WAITING AREA</text>
-          </g>
-
-          {/* ── Help & Porter Desk ── */}
-          <g className="smap-hit" onClick={() => handleSelect('help-desk')} role="button" aria-label="Help and Porter Desk">
-            <rect x="543" y="22" width="156" height="82" rx="3"
-                  fill={selected?.id === 'help-desk' ? '#fde8e8' : '#fffbe6'}
-                  stroke={selected?.id === 'help-desk' ? '#CC2027' : '#e2a820'} strokeWidth="1.5"/>
-            <text x="621" y="50" textAnchor="middle" fontSize="10" fontWeight="800" fill="#92400e">HELP &amp;</text>
-            <text x="621" y="65" textAnchor="middle" fontSize="10" fontWeight="700" fill="#92400e">PORTER DESK</text>
-            <circle cx="621" cy="86" r="1" fill="#e2a820"/>
-            {/* help symbol */}
-            <circle cx="621" cy="78" r="7" fill="none" stroke="#e2a820" strokeWidth="1.5"/>
-            <text x="621" y="82" textAnchor="middle" fontSize="10" fontWeight="800" fill="#e2a820">?</text>
-          </g>
-
-          {/* ── Station Staff Point ── */}
-          <g className="smap-hit" onClick={() => handleSelect('staff-point')} role="button" aria-label="Station Staff Point">
-            <rect x="713" y="22" width="99" height="82" rx="3"
-                  fill={selected?.id === 'staff-point' ? '#fde8e8' : '#fff'}
-                  stroke={selected?.id === 'staff-point' ? '#CC2027' : '#b8c8d8'} strokeWidth="1"/>
-            <text x="762" y="50" textAnchor="middle" fontSize="9" fontWeight="700" fill="#1a3a5c">STATION</text>
-            <text x="762" y="63" textAnchor="middle" fontSize="9" fontWeight="700" fill="#1a3a5c">STAFF</text>
-            <text x="762" y="76" textAnchor="middle" fontSize="9" fontWeight="600" fill="#1a3a5c">POINT</text>
-            <rect x="744" y="82" width="36" height="10" rx="2" fill="#CC2027" opacity="0.8"/>
-            <text x="762" y="91" textAnchor="middle" fontSize="7.5" fill="#fff" fontWeight="700">24 HRS</text>
-          </g>
-
-          {/* ── Accessible Toilet ── */}
-          <g className="smap-hit" onClick={() => handleSelect('accessible-toilet')} role="button" aria-label="Accessible Toilet">
-            <rect x="95" y="112" width="100" height="70" rx="3"
-                  fill={selected?.id === 'accessible-toilet' ? '#fde8e8' : '#f0e8ff'}
-                  stroke={selected?.id === 'accessible-toilet' ? '#CC2027' : '#9333ea'} strokeWidth="1.5"/>
-            <text x="145" y="145" textAnchor="middle" fontSize="10" fontWeight="800" fill="#7e22ce">ACCESSIBLE</text>
-            <text x="145" y="161" textAnchor="middle" fontSize="9" fontWeight="700" fill="#7e22ce">TOILET</text>
-          </g>
-
-          {/* ── Normal Toilet ── */}
-          <g className="smap-hit" onClick={() => handleSelect('normal-toilet')} role="button" aria-label="Toilet">
-            <rect x="203" y="112" width="88" height="70" rx="3"
-                  fill={selected?.id === 'normal-toilet' ? '#fde8e8' : '#f5f5f5'}
-                  stroke={selected?.id === 'normal-toilet' ? '#CC2027' : '#aaa'} strokeWidth="1.5"/>
-            <text x="247" y="148" textAnchor="middle" fontSize="16" fontWeight="800" fill="#555">WC</text>
-            <text x="247" y="164" textAnchor="middle" fontSize="8" fontWeight="600" fill="#777">TOILET</text>
-          </g>
-
-          {/* ── Elevator ── */}
-          <g className="smap-hit" onClick={() => handleSelect('elevator')} role="button" aria-label="Elevator">
-            <rect x="299" y="112" width="86" height="70" rx="3"
-                  fill={selected?.id === 'elevator' ? '#fde8e8' : '#dbeafe'}
-                  stroke={selected?.id === 'elevator' ? '#CC2027' : '#3b82f6'} strokeWidth="1.5"/>
-            <path d="M342 125v24m0-24-5 5m5-5 5 5m-5 24-5-5m5 5 5-5" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <text x="342" y="156" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#1d4ed8">ELEVATOR</text>
-            <text x="342" y="170" textAnchor="middle" fontSize="7" fontWeight="700" fill="#3b82f6">STEP-FREE</text>
-          </g>
-
-          {/* ── Stairs ── */}
-          <g className="smap-hit" onClick={() => handleSelect('stairs')} role="button" aria-label="Stairs">
-            <rect x="393" y="112" width="70" height="70" rx="3"
-                  fill={selected?.id === 'stairs' ? '#fde8e8' : '#f5f5f5'}
-                  stroke={selected?.id === 'stairs' ? '#CC2027' : '#999'} strokeWidth="1.5"/>
-            {[0,1,2,3].map(i => (
-              <rect key={i} x={402 + i * 8} y={130 + (3-i) * 7} width="20" height="7" rx="1" fill="#888"/>
-            ))}
-            <text x="428" y="172" textAnchor="middle" fontSize="8" fontWeight="600" fill="#555">STAIRS</text>
-          </g>
-
-          {/* ── Escalator ── */}
-          <g className="smap-hit" onClick={() => handleSelect('escalator')} role="button" aria-label="Escalator">
-            <rect x="471" y="112" width="80" height="70" rx="3"
-                  fill={selected?.id === 'escalator' ? '#fde8e8' : '#dcfce7'}
-                  stroke={selected?.id === 'escalator' ? '#CC2027' : '#16a34a'} strokeWidth="1.5"/>
-            <path d="M511 125v24m0-24-5 5m5-5 5 5m-5 24-5-5m5 5 5-5" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <text x="511" y="156" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#15803d">ESCALATOR</text>
-            <text x="511" y="170" textAnchor="middle" fontSize="7" fontWeight="700" fill="#16a34a">STEP-FREE</text>
-          </g>
-
-          {/* ── Main Entrance ── */}
-          <g className="smap-hit" onClick={() => handleSelect('main-entrance')} role="button" aria-label="Main Entrance">
-            <rect x="557" y="116" width="182" height="72" rx="3"
-                  fill={selected?.id === 'main-entrance' ? '#991b1b' : '#CC2027'} opacity="0.92"/>
-            <text x="648" y="148" textAnchor="middle" fontSize="12" fontWeight="800" fill="#fff">MAIN ENTRANCE</text>
-            <text x="648" y="164" textAnchor="middle" fontSize="8.5" fill="rgba(255,255,255,0.85)">Step-free access</text>
-            {/* door symbols */}
-            <rect x="616" y="182" width="20" height="5" rx="1" fill="#fff" opacity="0.5"/>
-            <rect x="646" y="182" width="20" height="5" rx="1" fill="#fff" opacity="0.5"/>
-          </g>
-
-          {/* Connector dashes from elevator/stairs/escalator to corridor */}
-          {[342, 428, 511].map(cx => (
-            <line key={cx} x1={cx} y1="182" x2={cx} y2="204"
-                  stroke="#8a9ab0" strokeWidth="2" strokeDasharray="3 2"/>
-          ))}
-
-
-          {/* ════════════════════════════════════════
-              PLATFORM ACCESS CORRIDOR (y: 204–222)
-          ════════════════════════════════════════ */}
-          <rect x="12" y="204" width="876" height="18" fill="#e2e7ec" stroke="#b9c4ce" strokeWidth="1"/>
-          <text x="450" y="216" textAnchor="middle" fontSize="7" fontWeight="600"
-                fill="#536273" letterSpacing="2">PLATFORM ACCESS CORRIDOR</text>
-
-
-          {/* ════════════════════════════════════════
-              PLATFORM ZONE BACKGROUND (y: 222–560)
-          ════════════════════════════════════════ */}
-          <rect x="12" y="222" width="876" height="338" fill="#f1f4f6"/>
-
-          {/* Left cross-corridor connecting all platforms */}
-          <rect x="12" y="222" width="76" height="338" fill="#e8edf1" stroke="#bdc7d0" strokeWidth="1"/>
-          <text x="50" y="400" textAnchor="middle" fontSize="7.5" fontWeight="700"
-                fill="#536273" transform="rotate(-90, 50, 400)" letterSpacing="3">
-            PLATFORM ACCESS
-          </text>
-
-          {/* Right open end (track extension indicator) */}
-          <rect x="888" y="222" width="12" height="338" fill="#d5dce2" stroke="#aeb9c4" strokeWidth="1"/>
-
-
-          {/* ════════════════════════════════════════
-              TRACKS
-          ════════════════════════════════════════ */}
-          {TRACK_STRIPS.map((t, i) => (
-            <g key={i}>
-              {/* Track ballast (gravel) */}
-              <rect x="88" y={t.y} width="800" height={t.h} fill="#aeb8c1"/>
-              {/* Rail 1 (top rail) */}
-              <rect x="88" y={t.y + 2} width="800" height="2.5" fill="#596673"/>
-              {/* Rail 2 (bottom rail) */}
-              <rect x="88" y={t.y + t.h - 4.5} width="800" height="2.5" fill="#596673"/>
-              {/* Sleepers every 22 px */}
-              {Array.from({ length: 37 }, (_, j) => (
-                <rect key={j}
-                  x={88 + j * 22} y={t.y + 0.5}
-                  width="3" height={t.h - 1}
-                  fill="#75828d" opacity="0.55"/>
-              ))}
-            </g>
-          ))}
-
-
-          {/* ════════════════════════════════════════
-              PLATFORMS
-          ════════════════════════════════════════ */}
-          {PLATFORM_STRIPS.map(p => {
-            const isSelected = selected?.id === p.id
-            const isDest     = destId === p.id
-            return (
-              <g key={p.id}
-                 className="smap-hit"
-                 onClick={() => handleSelect(p.id)}
-                 role="button"
-                 aria-label={`Platform ${p.number}`}>
-
-                {/* Platform surface */}
-                <rect x="88" y={p.y} width="800" height={p.h}
-                      fill={isSelected ? '#f9e9eb' : isDest ? '#f9e9eb' : '#fff'}
-                      stroke={isSelected || isDest ? '#b4232e' : '#c5ced7'}
-                      strokeWidth={isSelected ? 2.5 : 1}/>
-
-                {/* Platform edge warning strips (yellow) */}
-                <rect x="88" y={p.y} width="800" height="4" fill="#d8a928" opacity="0.72"/>
-                <rect x="88" y={p.y + p.h - 4} width="800" height="4" fill="#d8a928" opacity="0.72"/>
-
-                {/* Platform number — large, left side */}
-                <text x="108" y={p.y + p.h / 2 + 5}
-                      fontSize="13" fontWeight="800"
-                      fill={isSelected ? '#CC2027' : '#1a3a5c'}>
-                  Platform {p.number}
-                </text>
-
-                {/* Coach divider lines + labels */}
-                {COACH_LABELS.map((coach, ci) => {
-                  const cx = 120 + ci * 70 + 35
-                  return (
-                    <g key={coach}>
-                      <line x1={cx} y1={p.y + 4} x2={cx} y2={p.y + p.h - 4}
-                            stroke="#b0b8cc" strokeWidth="0.75" strokeDasharray="2 5"/>
-                      <text x={cx} y={p.y + p.h / 2 + 4}
-                            textAnchor="middle" fontSize="8" fill="#aab0c0">
-                        {coach}
-                      </text>
-                    </g>
-                  )
-                })}
-
-                {/* Destination badge */}
-                {isDest && (
-                  <>
-                    <rect x="800" y={p.y + 5} width="60" height="20" rx="3" fill="#b4232e"/>
-                    <text x="830" y={p.y + 19} textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#fff">
-                      DEST.
-                    </text>
-                  </>
-                )}
-              </g>
-            )
-          })}
-
-          {/* Platform connector dashes from left corridor */}
-          {PLATFORM_STRIPS.map(p => (
-            <line key={p.id + '-c'}
-                  x1="88" y1={p.y + p.h / 2}
-                  x2="68" y2={p.y + p.h / 2}
-                  stroke="#aeb9c4" strokeWidth="2" strokeDasharray="4 3"/>
-          ))}
-
-
-          {/* ════════════════════════════════════════
-              STATION END / SERVICE AREA (y: 540–610)
-          ════════════════════════════════════════ */}
-          <rect x="12" y="540" width="876" height="68" fill="#edf1f4" stroke="#bdc7d0" strokeWidth="1"/>
-          {/* Buffer stops */}
-          {PLATFORM_STRIPS.map(p => (
-            <rect key={p.id + '-buf'}
-                  x="878" y={p.y} width="10" height={p.h}
-                  fill="#aeb9c4" rx="1"/>
-          ))}
-          <text x="450" y="576" textAnchor="middle" fontSize="8" fill="#687687" letterSpacing="1">
-            TRACKS CONTINUE BEYOND STATION
-          </text>
-
-
-          {/* ════════════════════════════════════════
-              DESTINATION MARKER
-          ════════════════════════════════════════ */}
-          {destLoc && (
-            <g>
-              <circle cx={destLoc.x} cy={destLoc.y} r="14" fill="#b4232e" opacity="0.96"/>
-              <text x={destLoc.x} y={destLoc.y + 5}
-                    textAnchor="middle" fontSize="12" fill="#fff" fontWeight="800">D</text>
-            </g>
-          )}
-
-
-          {/* ════════════════════════════════════════
-              YOU ARE HERE — Platform 2, Coach B4
-          ════════════════════════════════════════ */}
-          <g>
-            {/* Pulse ring */}
-            <circle cx={CURRENT_LOCATION.x} cy={CURRENT_LOCATION.y} r="16" fill="#2563eb" opacity="0.12"/>
-            {/* Blue dot */}
-            <circle cx={CURRENT_LOCATION.x} cy={CURRENT_LOCATION.y} r="10" fill="#2563eb"/>
-            <circle cx={CURRENT_LOCATION.x} cy={CURRENT_LOCATION.y} r="4"  fill="#fff"/>
-            {/* Label */}
-            <rect x={CURRENT_LOCATION.x - 56} y={CURRENT_LOCATION.y - 34}
-                  width="112" height="17" rx="3" fill="#1e3a8a" opacity="0.92"/>
-            <text x={CURRENT_LOCATION.x} y={CURRENT_LOCATION.y - 22}
-                  textAnchor="middle" fontSize="8.5" fontWeight="800" fill="#fff">
-              YOU ARE HERE
-            </text>
-            <rect x={CURRENT_LOCATION.x - 54} y={CURRENT_LOCATION.y - 16}
-                  width="108" height="13" rx="2" fill="#fff" opacity="0.88"/>
-            <text x={CURRENT_LOCATION.x} y={CURRENT_LOCATION.y - 6}
-                  textAnchor="middle" fontSize="7.5" fontWeight="600" fill="#1e3a8a">
-              {CURRENT_LOCATION.label}
-            </text>
-          </g>
-
-          {/* ════════════════════════════════════════
-              SELECTED LOCATION RING (non-platform)
-          ════════════════════════════════════════ */}
-          {selected && !PLATFORM_IDS.has(selected.id) && (
-            <circle cx={selected.x} cy={selected.y} r="20"
-                    fill="none" stroke="#CC2027" strokeWidth="3"
-                    strokeDasharray="6 3" opacity="0.85"/>
-          )}
-
-        </svg>
-
-        {/* ── Map controls ── */}
-        <div className="smap-controls" role="group" aria-label="Map controls">
-          <button className="smap-ctrl" onClick={zoomIn}  aria-label="Zoom in"  title="Zoom in">+</button>
-          <button className="smap-ctrl" onClick={zoomOut} aria-label="Zoom out" title="Zoom out">−</button>
-          <button className="smap-ctrl smap-ctrl--sm" onClick={recenter} aria-label="Recenter" title="Recenter on current location">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
-          </button>
-          <button className="smap-ctrl smap-ctrl--sm" onClick={resetMap} aria-label="Reset map" title="Reset to full view">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7"/><path d="M4 5v6h6"/></svg>
-          </button>
-        </div>
-      </div>
-
-      {/* ── Legend ── */}
-      <div className="smap-legend" aria-label="Map legend">
-        <div className="smap-legend-item">
-          <span className="smap-legend-dot smap-legend-dot--here"/>
-          <span>You are here</span>
-        </div>
-        <div className="smap-legend-item">
-          <span className="smap-legend-sym smap-legend-sym--dest">D</span>
-          <span>Destination</span>
-        </div>
-        <div className="smap-legend-item">
-          <svg className="smap-legend-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v18m0-18-4 4m4-4 4 4m-4 18-4-4m4 4 4-4" /></svg>
-          <span>Elevator / Escalator</span>
-        </div>
-        <div className="smap-legend-item">
-          <span className="smap-legend-sym">WC</span>
-          <span>Toilet</span>
-        </div>
-        <div className="smap-legend-item">
-          <span className="smap-legend-sym smap-legend-sym--access" aria-hidden="true">A</span>
-          <span>Step-free access</span>
-        </div>
-      </div>
-
-      {/* ── Location info panel ── */}
-      {selected && (
-        <div className="smap-panel" role="region" aria-label="Location information">
-          <div className="smap-sheet-handle" aria-hidden="true"><span /></div>
-          <div className="smap-panel-row">
-            <div className="smap-panel-info">
-              <p className="smap-panel-type">{TYPE_LABELS[selected.type] || selected.type}</p>
-              <h3 className="smap-panel-name">{selected.name}</h3>
-              {selected.accessible && (
-                <span className="smap-panel-access">Wheelchair accessible</span>
-              )}
-            </div>
-            <button className="smap-panel-close" onClick={() => setSelected(null)} aria-label="Close panel">
-              <IconClose />
-            </button>
-          </div>
-          <p className="smap-panel-desc">{selected.description}</p>
-          <div className="smap-panel-actions">
-            <button
-              className="smap-btn-dest"
-              onClick={() => { setDestId(selected.id); setSelected(null) }}
-            >
-              Set as Destination
-            </button>
-            {destId === selected.id && (
-              <button
-                className="smap-btn-clear"
-                onClick={() => { setDestId(null); setSelected(null) }}
-              >
-                Clear Destination
+        <div className={`smap-search${searchOpen ? ' is-open' : ''}`}>
+          <label className="search-field">
+            <Icon name="search" size={20} />
+            <span className="sr-only">Search destination</span>
+            <input
+              className="search-field__input"
+              type="search"
+              placeholder="Search destination"
+              value={query}
+              onChange={event => { setQuery(event.target.value); setActiveCat(null) }}
+              onFocus={() => setShowPicker(true)}
+              autoComplete="off"
+            />
+            {searchOpen && (
+              <button type="button" className="search-field__btn" onClick={closeSearch} aria-label="Close search">
+                <Icon name="close" size={18} />
               </button>
             )}
-          </div>
-        </div>
-      )}
+          </label>
 
-      {/* ── Destination summary card ── */}
-      {destId && !selected && (
-        <div className="smap-dest-card" role="region" aria-label="Destination summary">
-          <div className="smap-sheet-handle" aria-hidden="true"><span /></div>
-          <p className="smap-dest-card-heading">Destination</p>
-          <h3 className="smap-dest-card-name">{destLoc?.name}</h3>
-          <p className="smap-dest-card-type">
-            {TYPE_LABELS[destLoc?.type] || destLoc?.type}
-          </p>
-          <p className="smap-dest-card-station">{STATION_META.name} ({STATION_META.code})</p>
-          {destLoc?.accessible && (
-            <p className="smap-dest-row-access">Wheelchair accessible</p>
+          {searchOpen && (
+            <div className="smap-panel" role="region" aria-label="Destination options">
+              {query ? (
+                results.length > 0 ? (
+                  results.map(loc => <LocationResult key={loc.id} location={loc} onClick={() => pickResult(loc)} />)
+                ) : (
+                  <p className="smap-panel__empty">{`No places match "${query}".`}</p>
+                )
+              ) : category ? (
+                <>
+                  <button type="button" className="smap-panel__back" onClick={() => setActiveCat(null)}>
+                    <Icon name="chevronLeft" size={18} /> {category.label}
+                  </button>
+                  {LOCATIONS.filter(category.matches).map(loc => (
+                    <LocationResult key={loc.id} location={loc} onClick={() => pickResult(loc)} />
+                  ))}
+                </>
+              ) : (
+                <>
+                  <p className="smap-panel__label">Browse by type</p>
+                  <div className="smap-cats">
+                    {CATEGORIES.map(cat => (
+                      <button key={cat.key} type="button" className="smap-cat" onClick={() => setActiveCat(cat.key)}>
+                        <Icon name={cat.icon} size={20} />
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           )}
-          <div className="smap-dest-actions">
-            <button className="smap-btn-view-dest" onClick={focusDestination}>
-              View on Map
-            </button>
-            <button
-              className="smap-btn-dest-clear"
-              onClick={clearDest}
-              aria-label="Clear destination"
-            >
-              Clear
+        </div>
+      </div>
+
+      <div className="smap-stage" ref={camera.stageRef} {...camera.stageHandlers}>
+        <StationMapCanvas
+          viewBox={camera.viewBox}
+          selectedId={selected?.id}
+          destinationId={destId}
+          onSelect={handleSelect}
+          className={camera.ready ? '' : 'is-loading'}
+          title={`${STATION_META.name} indoor station map. Drag to move, pinch or scroll to zoom, and select a location for details.`}
+        />
+
+        <div className="smap-controls" role="group" aria-label="Map controls">
+          <div className="smap-zoom">
+            <button type="button" className="smap-control" onClick={camera.zoomIn} disabled={!camera.canZoomIn} aria-label="Zoom in"><Icon name="plus" size={20} /></button>
+            <span className="smap-zoom__divider" aria-hidden="true" />
+            <button type="button" className="smap-control" onClick={camera.zoomOut} disabled={!camera.canZoomOut} aria-label="Zoom out"><Icon name="minus" size={20} /></button>
+          </div>
+          <button type="button" className="smap-control smap-control--solo" onClick={resetMap} aria-label="Show whole station"><Icon name="reset" size={20} /></button>
+          <button type="button" className="smap-control smap-control--solo smap-control--locate" onClick={recenter} aria-label="Centre on my location"><Icon name="locate" size={20} /></button>
+        </div>
+      </div>
+
+      <section className="smap-sheet" ref={sheetRef} aria-live="polite" aria-label="Location details">
+        <span className="smap-sheet__grip" aria-hidden="true" />
+        {sheetLocation ? (
+          <>
+            <div className="smap-sheet__head">
+              <span className={`tile-icon tile-icon--${getLocationTone(sheetLocation)}`} aria-hidden="true">
+                <Icon name={getLocationIcon(sheetLocation)} size={22} />
+              </span>
+              <div className="smap-sheet__text">
+                <p className="smap-sheet__eyebrow">{sheetIsDestination ? 'Destination' : getTypeLabel(sheetLocation)}</p>
+                <h2 className="smap-sheet__title">{sheetLocation.name}</h2>
+              </div>
+              <button
+                type="button"
+                className="icon-btn smap-sheet__close"
+                onClick={sheetIsDestination ? clearDest : () => setSelected(null)}
+                aria-label={sheetIsDestination ? 'Clear destination' : 'Close details'}
+              >
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+            <p className="smap-sheet__desc">{sheetLocation.description}</p>
+            <div className="chip-row smap-sheet__tags">
+              <span className={`badge ${sheetLocation.accessible ? 'badge--success' : 'badge--neutral'}`}>
+                <Icon name="accessibility" size={14} /> {sheetLocation.accessible ? 'Step-free access' : 'Not step-free'}
+              </span>
+              <span className="badge badge--neutral">{sheetLocation.level === 'both' ? 'All levels' : `${sheetLocation.level[0].toUpperCase()}${sheetLocation.level.slice(1)} level`}</span>
+            </div>
+            <div className="actions actions--row smap-sheet__actions">
+              {sheetIsDestination ? (
+                <button type="button" className="btn btn--secondary btn--sm" onClick={() => focus(sheetLocation)}>
+                  <Icon name="pin" size={18} /> Show on map
+                </button>
+              ) : (
+                <button type="button" className="btn btn--secondary btn--sm" onClick={() => pickResult(sheetLocation)}>
+                  <Icon name="pin" size={18} /> Set destination
+                </button>
+              )}
+              <button type="button" className="btn btn--dark btn--sm" onClick={() => navigate('/navigation', { state: { destinationId: sheetLocation.id } })}>
+                <Icon name="navigation" size={18} /> Directions
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="smap-sheet__idle">
+            <span className="smap-sheet__dot" aria-hidden="true" />
+            <div className="smap-sheet__text">
+              <p className="smap-sheet__eyebrow">You are here</p>
+              <p className="smap-sheet__title">{CURRENT_LOCATION.label}</p>
+            </div>
+            <button type="button" className="btn btn--dark btn--sm smap-sheet__go" onClick={() => setShowPicker(true)}>
+              <Icon name="search" size={16} /> Go to
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </section>
 
       <BottomNav />
     </div>

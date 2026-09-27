@@ -1,209 +1,157 @@
-import { useState, useRef, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
+import ScreenHeader from '../components/ScreenHeader'
+import ListRow from '../components/ListRow'
+import SummaryList from '../components/SummaryList'
+import Icon from '../components/Icon'
 import { STATION_META, CURRENT_LOCATION } from '../data/stationData'
 import './Emergency.css'
 
-// ── Emergency type options ─────────────────────────────────────────────────
 const EMERGENCY_TYPES = [
-  {
-    id: 'medical',
-    label: 'Medical Emergency',
-    desc: 'Injury, illness, or someone has collapsed',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-        <path d="M12 2v20M2 12h20"/>
-        <rect x="4" y="4" width="16" height="16" rx="2"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'lost',
-    label: 'Lost / Confused',
-    desc: 'Cannot find your way or platform',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'unsafe',
-    label: 'Unsafe Situation',
-    desc: 'Suspicious activity or feeling unsafe',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-        <line x1="12" y1="9" x2="12" y2="13"/>
-        <line x1="12" y1="17" x2="12.01" y2="17"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'someone',
-    label: 'Someone Needs Help',
-    desc: 'Another person needs assistance',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'other',
-    label: 'Other',
-    desc: 'Any other assistance needed',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-    ),
-  },
+  { id: 'medical', label: 'Medical emergency', desc: 'Injury, illness or someone has collapsed', icon: 'medical' },
+  { id: 'unsafe', label: 'Unsafe situation', desc: 'Suspicious activity or feeling unsafe', icon: 'alert' },
+  { id: 'someone', label: 'Someone needs help', desc: 'Another person needs assistance', icon: 'users' },
+  { id: 'lost', label: 'Lost or confused', desc: 'Cannot find your way or platform', icon: 'compass' },
+  { id: 'other', label: 'Other', desc: 'Any other urgent assistance', icon: 'more' },
 ]
 
-// ── Flow steps ─────────────────────────────────────────────────────────────
-const STEP_SELECT   = 'select'
-const STEP_DETAILS  = 'details'
-const STEP_CONFIRM  = 'confirm'
-const STEP_SENT     = 'sent'
+const TITLES = {
+  select: 'Emergency help',
+  details: 'Add details',
+  confirm: 'Confirm request',
+  sent: 'Request sent',
+}
 
-// ══════════════════════════════════════════════════════════════════════════
+const BACK_STEP = { details: 'select', confirm: 'details' }
+
+function CallCard() {
+  return (
+    <div className="sos-call">
+      <div className="card-head">
+        <span className="tile-icon tile-icon--danger" aria-hidden="true"><Icon name="phone" size={22} /></span>
+        <div>
+          <p className="card__title">In immediate danger?</p>
+          <p className="card__text">Call emergency services now.</p>
+        </div>
+      </div>
+      <div className="actions actions--row sos-call__actions">
+        <a className="btn btn--danger btn--sm" href="tel:112">Call 112</a>
+        <a className="btn btn--secondary btn--sm" href="tel:139">Rail 139</a>
+      </div>
+    </div>
+  )
+}
+
+function LocationCard() {
+  return (
+    <div className="sos-location">
+      <span className="sos-location__dot" aria-hidden="true" />
+      <div className="list-row__body">
+        <span className="sos-location__label">Your location</span>
+        <span className="list-row__title">{CURRENT_LOCATION.label}</span>
+        <span className="sos-location__station">{STATION_META.name} ({STATION_META.code})</span>
+      </div>
+    </div>
+  )
+}
+
 export default function Emergency() {
   const navigate = useNavigate()
-  const [step, setStep]           = useState(STEP_SELECT)
-  const [type, setType]           = useState(null)
-  const [description, setDesc]    = useState('')
-  const [photo, setPhoto]         = useState(null)     // File object
-  const [photoPreview, setPreview]= useState(null)     // data URL
+  const [step, setStep] = useState('select')
+  const [typeId, setTypeId] = useState(null)
+  const [description, setDescription] = useState('')
+  const [photo, setPhoto] = useState(null)
   const fileRef = useRef(null)
 
-  // ── Photo handlers ───────────────────────────────────────────────────────
-  const handlePhoto = useCallback((e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setPhoto(file)
-    const reader = new FileReader()
-    reader.onload = () => setPreview(reader.result)
-    reader.readAsDataURL(file)
-  }, [])
+  useEffect(() => () => { if (photo) URL.revokeObjectURL(photo.url) }, [photo])
 
-  const removePhoto = useCallback(() => {
-    setPhoto(null)
-    setPreview(null)
-    if (fileRef.current) fileRef.current.value = ''
-  }, [])
-
-  // ── Send request (simulated) ─────────────────────────────────────────────
-  const sendRequest = useCallback(() => {
-    setStep(STEP_SENT)
-  }, [])
-
-  // ── Reset flow ───────────────────────────────────────────────────────────
-  const resetFlow = useCallback(() => {
-    setStep(STEP_SELECT)
-    setType(null)
-    setDesc('')
-    removePhoto()
-  }, [removePhoto])
-
-  // ── Derived ──────────────────────────────────────────────────────────────
-  const typeInfo   = EMERGENCY_TYPES.find(t => t.id === type)
-  const shortLoc   = CURRENT_LOCATION.label
+  const typeInfo = EMERGENCY_TYPES.find(t => t.id === typeId)
   const stationStr = `${STATION_META.name} (${STATION_META.code})`
-  const requestStatus = 'sent'
 
-  // ── Status badge helpers ─────────────────────────────────────────────────
-  const statusLabel = {
-    sent:       'Assistance requested',
-  }
-  const statusClass = {
-    sent:       'sos-status--sent',
+  const handlePhoto = event => {
+    const file = event.target.files?.[0]
+    if (file) setPhoto({ name: file.name, url: URL.createObjectURL(file) })
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
+  const removePhoto = () => {
+    setPhoto(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const resetFlow = () => {
+    setStep('select')
+    setTypeId(null)
+    setDescription('')
+    removePhoto()
+  }
+
+  const selectType = id => { setTypeId(id); setStep('details') }
+
+  const summaryItems = [
+    { label: 'Emergency', value: typeInfo?.label },
+    { label: 'Location', value: CURRENT_LOCATION.label },
+    { label: 'Station', value: stationStr },
+  ]
+
   return (
-    <div className="sos-page">
+    <div className="screen">
+      <ScreenHeader
+        title={TITLES[step]}
+        subtitle={step === 'select' ? 'Tell us what is happening.' : undefined}
+        onBack={BACK_STEP[step] ? () => setStep(BACK_STEP[step]) : undefined}
+      />
 
-      {/* ── Header ── */}
-      <div className="sos-header">
-        <h1 className="sos-header-title">Emergency Help</h1>
-        {step === STEP_SELECT && (
-          <p className="sos-header-sub">Tell us what kind of help you need.</p>
-        )}
-      </div>
-
-      <div className="sos-body">
-
-        {/* ═══════════════════════════════════════════
-            STEP 1 — Select emergency type
-        ═══════════════════════════════════════════ */}
-        {step === STEP_SELECT && (
-          <div className="sos-types">
-            {EMERGENCY_TYPES.map(t => (
-              <button
-                key={t.id}
-                className={`sos-type-btn sos-type-btn--${t.id}`}
-                onClick={() => { setType(t.id); setStep(STEP_DETAILS) }}
-                aria-label={t.label}
-              >
-                <span className={`sos-type-icon sos-type-icon--${t.id}`}>{t.icon}</span>
-                <div className="sos-type-text">
-                  <span className="sos-type-label">{t.label}</span>
-                  <span className="sos-type-desc">{t.desc}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-
-        {/* ═══════════════════════════════════════════
-            STEP 2 — Details (location, photo, description)
-        ═══════════════════════════════════════════ */}
-        {step === STEP_DETAILS && typeInfo && (
-          <div className="sos-details">
-
-            {/* Selected type */}
-            <div className="sos-selected-type">
-              <span className="sos-selected-icon">{typeInfo.icon}</span>
-              <h2 className="sos-selected-label">{typeInfo.label}</h2>
-            </div>
-
-            <p className="sos-detail-hint">
-              Your current station location will be included in this prototype request.
-            </p>
-
-            {/* Location card */}
-            <div className="sos-location-card">
-              <p className="sos-loc-station">{stationStr}</p>
-              <div className="sos-loc-row">
-                <span className="sos-loc-dot" />
-                <div>
-                  <p className="sos-loc-label">Current Location</p>
-                  <p className="sos-loc-value">{shortLoc}</p>
-                </div>
+      <main className="screen__body">
+        {step === 'select' && (
+          <>
+            <CallCard />
+            <section className="section" aria-labelledby="sos-types">
+              <h2 id="sos-types" className="section__title" style={{ marginBottom: 12 }}>Alert station staff</h2>
+              <div className="list-group">
+                {EMERGENCY_TYPES.map(type => (
+                  <ListRow
+                    key={type.id}
+                    icon={type.icon}
+                    tone="danger"
+                    title={type.label}
+                    description={type.desc}
+                    onClick={() => selectType(type.id)}
+                  />
+                ))}
               </div>
+            </section>
+          </>
+        )}
+
+        {step === 'details' && typeInfo && (
+          <>
+            <div className="card sos-selected">
+              <span className="tile-icon tile-icon--danger" aria-hidden="true"><Icon name={typeInfo.icon} size={22} /></span>
+              <div className="list-row__body">
+                <span className="sos-location__label">Emergency type</span>
+                <span className="card__title">{typeInfo.label}</span>
+              </div>
+              <button type="button" className="text-link" onClick={() => setStep('select')}>Change</button>
             </div>
 
-            {/* Photo (optional) */}
-            <div className="sos-section">
-              <p className="sos-section-title">Add a photo</p>
-              <p className="sos-section-hint">Photo is optional</p>
-              {photoPreview ? (
-                <div className="sos-photo-preview">
-                  <img src={photoPreview} alt="Attached" className="sos-photo-img" />
-                  <button className="sos-photo-remove" onClick={removePhoto} aria-label="Remove photo">
-                    Remove
+            <div className="section">
+              <LocationCard />
+            </div>
+
+            <div className="section">
+              <p className="field-label">Photo <span className="field-label__hint">(optional)</span></p>
+              {photo ? (
+                <div className="sos-photo">
+                  <img src={photo.url} alt="Attached to your emergency request" className="sos-photo__img" />
+                  <button type="button" className="btn btn--secondary btn--sm" onClick={removePhoto}>
+                    <Icon name="close" size={18} /> Remove photo
                   </button>
                 </div>
               ) : (
-                <button className="sos-photo-btn" onClick={() => fileRef.current?.click()}>
-                  Take / Upload Photo
+                <button type="button" className="sos-upload" onClick={() => fileRef.current?.click()}>
+                  <Icon name="camera" size={22} />
+                  <span>Take or upload a photo</span>
                 </button>
               )}
               <input
@@ -211,147 +159,75 @@ export default function Emergency() {
                 type="file"
                 accept="image/*"
                 capture="environment"
-                className="sos-file-input"
+                className="sr-only"
+                tabIndex={-1}
                 onChange={handlePhoto}
                 aria-label="Select photo"
               />
             </div>
 
-            {/* Description (optional) */}
-            <div className="sos-section">
-              <p className="sos-section-title">Describe what happened</p>
+            <div className="section">
+              <label htmlFor="sos-desc" className="field-label">
+                What is happening? <span className="field-label__hint">(optional)</span>
+              </label>
               <textarea
-                className="sos-textarea"
+                id="sos-desc"
+                className="textarea"
                 rows="3"
                 maxLength={500}
-                placeholder="Add any details about what is happening..."
+                placeholder="Add any details that can help staff..."
                 value={description}
-                onChange={e => setDesc(e.target.value)}
-                aria-label="Describe the situation"
+                onChange={e => setDescription(e.target.value)}
               />
+              <p className="sos-count">{description.length}/500</p>
             </div>
 
-            {/* Action buttons */}
-            <div className="sos-actions">
-              <button className="sos-btn-primary" onClick={() => setStep(STEP_CONFIRM)}>
-                Send Help Request
+            <div className="actions">
+              <button type="button" className="btn btn--danger btn--block" onClick={() => setStep('confirm')}>
+                <Icon name="siren" size={20} /> Continue
               </button>
-              <button className="sos-btn-secondary" onClick={resetFlow}>
-                Cancel
-              </button>
+              <button type="button" className="btn btn--secondary btn--block" onClick={resetFlow}>Cancel</button>
             </div>
-          </div>
+          </>
         )}
 
-
-        {/* ═══════════════════════════════════════════
-            STEP 3 — Confirm before sending
-        ═══════════════════════════════════════════ */}
-        {step === STEP_CONFIRM && typeInfo && (
-          <div className="sos-confirm">
-            <div className="sos-confirm-box">
-              <h2 className="sos-confirm-title">
-                Are you sure you want to send this help request?
-              </h2>
-
-              <div className="sos-confirm-summary">
-                <div className="sos-confirm-row">
-                  <span className="sos-confirm-label">Emergency Type</span>
-                  <span className="sos-confirm-value">{typeInfo.label}</span>
-                </div>
-                <div className="sos-confirm-row">
-                  <span className="sos-confirm-label">Location</span>
-                  <span className="sos-confirm-value">{shortLoc}</span>
-                </div>
-                <div className="sos-confirm-row">
-                  <span className="sos-confirm-label">Station</span>
-                  <span className="sos-confirm-value">{stationStr}</span>
-                </div>
-                {description.trim() && (
-                  <div className="sos-confirm-row">
-                    <span className="sos-confirm-label">Description</span>
-                    <span className="sos-confirm-value">{description}</span>
-                  </div>
-                )}
-                {photo && (
-                  <div className="sos-confirm-row">
-                    <span className="sos-confirm-label">Photo</span>
-                    <span className="sos-confirm-value">1 photo attached</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="sos-actions">
-                <button className="sos-btn-primary sos-btn-primary--confirm" onClick={sendRequest}>
-                  Send Request
-                </button>
-                <button className="sos-btn-secondary" onClick={() => setStep(STEP_DETAILS)}>
-                  Cancel
-                </button>
-              </div>
+        {step === 'confirm' && typeInfo && (
+          <>
+            <p className="section__hint">Station staff will be alerted to your location right away.</p>
+            <SummaryList
+              items={[
+                ...summaryItems,
+                description.trim() && { label: 'Details', value: description },
+                photo && { label: 'Photo', value: '1 photo attached' },
+              ]}
+            />
+            <div className="actions">
+              <button type="button" className="btn btn--danger btn--block" onClick={() => setStep('sent')}>
+                <Icon name="siren" size={20} /> Send emergency request
+              </button>
+              <button type="button" className="btn btn--secondary btn--block" onClick={() => setStep('details')}>Go back</button>
             </div>
-          </div>
+          </>
         )}
 
-
-        {/* ═══════════════════════════════════════════
-            STEP 4 — Help request sent
-        ═══════════════════════════════════════════ */}
-        {step === STEP_SENT && typeInfo && (
-          <div className="sos-sent">
-
-            {/* Checkmark */}
-            <div className="sos-sent-check">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
+        {step === 'sent' && typeInfo && (
+          <>
+            <div className="status-hero" role="status">
+              <span className="status-hero__icon" aria-hidden="true"><Icon name="check" size={32} strokeWidth={2.6} /></span>
+              <p className="status-hero__title">Help is on the way</p>
+              <p className="status-hero__text">Stay where you are if it is safe to do so.</p>
             </div>
-
-            <h2 className="sos-sent-title">Help Request Sent</h2>
-            <p className="sos-sent-sub">Your request has been recorded.</p>
-
-            {/* Status badge */}
-            <div className={`sos-status-badge ${statusClass[requestStatus]}`}>
-              {statusLabel[requestStatus]}
+            <div className="section">
+              <SummaryList items={[...summaryItems, { label: 'Status', value: 'Assistance requested', tone: 'success' }]} />
             </div>
-
-            {/* Summary */}
-            <div className="sos-sent-summary">
-              <div className="sos-confirm-row">
-                <span className="sos-confirm-label">Emergency Type</span>
-                <span className="sos-confirm-value">{typeInfo.label}</span>
-              </div>
-              <div className="sos-confirm-row">
-                <span className="sos-confirm-label">Location</span>
-                <span className="sos-confirm-value">{shortLoc}</span>
-              </div>
-              <div className="sos-confirm-row">
-                <span className="sos-confirm-label">Station</span>
-                <span className="sos-confirm-value">{stationStr}</span>
-              </div>
-              <div className="sos-confirm-row">
-                <span className="sos-confirm-label">Status</span>
-                <span className={`sos-confirm-value sos-confirm-value--status ${statusClass[requestStatus]}`}>
-                  {statusLabel[requestStatus]}
-                </span>
-              </div>
+            <p className="proto-note">This is a prototype simulation. No real emergency services have been contacted.</p>
+            <div className="actions">
+              <button type="button" className="btn btn--dark btn--block" onClick={() => navigate('/')}>Back to Home</button>
+              <button type="button" className="btn btn--secondary btn--block" onClick={resetFlow}>New request</button>
             </div>
-
-            <p className="sos-proto-note">
-              This is a prototype simulation. No real emergency services have been contacted.
-            </p>
-
-            <div className="sos-actions">
-              <button className="sos-btn-primary" onClick={() => navigate('/')}>
-                Back to Home
-              </button>
-              <button className="sos-btn-secondary" onClick={resetFlow}>
-                New Request
-              </button>
-            </div>
-          </div>
+          </>
         )}
-      </div>
+      </main>
 
       <BottomNav />
     </div>

@@ -1,492 +1,266 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
-import ChevronRight from '../components/ChevronRight'
+import ScreenHeader from '../components/ScreenHeader'
+import ListRow from '../components/ListRow'
+import SummaryList from '../components/SummaryList'
+import Icon from '../components/Icon'
 import { STATION_META, CURRENT_LOCATION, LOCATIONS, HELP_POINTS } from '../data/stationData'
-import './HelpPoints.css'
+import './VoiceRequest.css'
 
-// ── Help type options ──────────────────────────────────────────────────────
 const HELP_TYPES = [
-  { id: 'directions',  label: 'Directions',            desc: 'Help finding your way around the station' },
-  { id: 'elderly',     label: 'Elderly Assistance',     desc: 'Support for elderly passengers' },
-  { id: 'wheelchair',  label: 'Wheelchair Assistance',  desc: 'Accessible route and mobility help' },
-  { id: 'lost-item',   label: 'Lost Item',              desc: 'Report or find a lost item' },
-  { id: 'porter',      label: 'Porter / Luggage Help',  desc: 'Help carrying or moving luggage' },
-  { id: 'other',       label: 'Other',                  desc: 'Any other assistance' },
+  { id: 'directions', label: 'Directions', desc: 'Help finding your way around the station', icon: 'directions', tone: 'blue' },
+  { id: 'elderly', label: 'Elderly Assistance', desc: 'Support for elderly passengers', icon: 'elderly', tone: 'green' },
+  { id: 'wheelchair', label: 'Wheelchair Assistance', desc: 'Accessible route and mobility help', icon: 'accessibility', tone: 'blue' },
+  { id: 'lost-item', label: 'Lost Item', desc: 'Report or find a lost item', icon: 'package', tone: 'neutral' },
+  { id: 'porter', label: 'Porter / Luggage Help', desc: 'Help carrying or moving luggage', icon: 'luggage', tone: 'neutral' },
+  { id: 'other', label: 'Other', desc: 'Any other assistance', icon: 'more', tone: 'neutral' },
 ]
 
-// ── Location choices (from existing data) ──────────────────────────────────
 const LOCATION_CHOICES = LOCATIONS.filter(l =>
-  ['platform','entrance','facility','help','information'].includes(l.type) ||
-  l.id === 'waiting-area' || l.id === 'ticket-counter'
-).map(l => ({ id: l.id, label: l.name }))
+  ['platform', 'entrance', 'facility', 'help', 'information'].includes(l.type) ||
+  l.id === 'waiting-area' || l.id === 'ticket-counter',
+)
 
-// ── Flow steps ─────────────────────────────────────────────────────────────
-const STEP_HOME     = 'home'
-const STEP_TYPE     = 'type'
-const STEP_LOCATION = 'location'
-const STEP_SUMMARY  = 'summary'
-const STEP_CONFIRM  = 'confirm'
-const STEP_SENT     = 'sent'
-const STEP_POINTS   = 'points'
-const STEP_POINT_DETAIL = 'point-detail'
+const TITLES = {
+  home: 'Need help?',
+  type: 'Ask for help',
+  location: 'Where are you?',
+  summary: 'Help request',
+  confirm: 'Confirm request',
+  sent: 'Request sent',
+  points: 'Help points',
+  'point-detail': 'Help point',
+}
+
+const BACK_STEP = { type: 'home', location: 'type', summary: 'location', confirm: 'summary', points: 'home', 'point-detail': 'points' }
 
 const formatHelpPointName = name => name.replace(/(\d+)$/, number => number.padStart(2, '0'))
+const locationName = id => LOCATIONS.find(location => location.id === id)?.name
 
-// ── SVG icons ──────────────────────────────────────────────────────────────
-const IconBack = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
-    <polyline points="15 18 9 12 15 6"/>
-  </svg>
-)
-const IconHelp = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="10"/>
-    <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/>
-  </svg>
-)
-const IconLocation = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-    <circle cx="12" cy="9" r="2.5"/>
-  </svg>
-)
-const HelpOptionIcon = ({ type }) => {
-  const icons = {
-    directions: <><path d="M4 20 20 4M7 4h13v13"/><path d="M4 9V4h5"/></>,
-    elderly: <><circle cx="12" cy="4" r="2"/><path d="M12 6v6l-3 8m3-8 4 8m-7-8h6"/></>,
-    wheelchair: <><circle cx="12" cy="4" r="2"/><path d="M12 7v5h5l2 5m-9-5a5 5 0 1 0 5 5"/></>,
-    'lost-item': <><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1.1-1.5 2.5M12 17h.01"/></>,
-    porter: <><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 8V5h6v3M8 20v2m8-2v2"/></>,
-    other: <><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></>,
-  }
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icons[type]}</svg>
+function TypeList({ onSelect }) {
+  return (
+    <div className="list-group">
+      {HELP_TYPES.map(type => (
+        <ListRow key={type.id} icon={type.icon} tone={type.tone} title={type.label} description={type.desc} onClick={() => onSelect(type.id)} />
+      ))}
+    </div>
+  )
 }
-const IconQR = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-    <rect x="3" y="14" width="7" height="7"/><rect x="17" y="17" width="4" height="4"/>
-    <line x1="14" y1="14" x2="14" y2="17"/><line x1="14" y1="14" x2="17" y2="14"/>
-  </svg>
-)
-const IconCheck = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
-    <polyline points="20 6 9 17 4 12"/>
-  </svg>
-)
 
-// ══════════════════════════════════════════════════════════════════════════
 export default function VoiceRequest() {
   const navigate = useNavigate()
-
-  const [step, setStep]         = useState(STEP_HOME)
+  const [step, setStep] = useState('home')
   const [helpType, setHelpType] = useState(null)
-  const [locId, setLocId]       = useState(null)
-  const [details, setDetails]   = useState('')
-  const [status, setStatus]     = useState('sent')  // 'sent' | 'assigned'
-  const [qrMsg, setQrMsg]       = useState(false)
-  const [selectedHP, setHP]     = useState(null)     // help point detail
+  const [locId, setLocId] = useState(null)
+  const [details, setDetails] = useState('')
+  const [qrMsg, setQrMsg] = useState(false)
+  const [selectedHP, setHP] = useState(null)
+  const [activeReq, setActiveReq] = useState(null)
 
-  // Active request tracking
-  const [activeReq, setActiveReq] = useState(null) // { type, location, status }
-
-  // ── Helpers ────────────────────────────────────────────────────────────
   const stationStr = `${STATION_META.name} (${STATION_META.code})`
-  const typeLabel  = HELP_TYPES.find(t => t.id === helpType)?.label || ''
-  const locLabel   = locId === 'current'
-    ? CURRENT_LOCATION.label
-    : LOCATIONS.find(l => l.id === locId)?.name || ''
+  const typeLabel = HELP_TYPES.find(t => t.id === helpType)?.label || ''
+  const locLabel = locId === 'current' ? CURRENT_LOCATION.label : locationName(locId) || ''
 
-  const statusLabels = {
-    sent:     'Assistance requested',
-  }
+  const requestItems = [
+    { label: 'Help needed', value: typeLabel },
+    { label: 'Location', value: locLabel },
+    { label: 'Station', value: stationStr },
+  ]
 
-  // ── Actions ────────────────────────────────────────────────────────────
-  const selectType = useCallback((id) => {
-    setHelpType(id)
-    setStep(STEP_LOCATION)
-  }, [])
+  const selectType = id => { setHelpType(id); setStep('location') }
+  const selectLocation = id => { setLocId(id); setStep('summary') }
 
-  const selectLocation = useCallback((id) => {
-    setLocId(id)
-    setStep(STEP_SUMMARY)
-  }, [])
-
-  const goConfirm = useCallback(() => setStep(STEP_CONFIRM), [])
-
-  const sendRequest = useCallback(() => {
-    setStatus('sent')
-    setStep(STEP_SENT)
-    setActiveReq({ type: typeLabel, location: locLabel, status: 'sent' })
-  }, [typeLabel, locLabel])
-
-  const cancelRequest = useCallback(() => {
-    setActiveReq(null)
-    resetFlow()
-  }, [])
-
-  const resetFlow = useCallback(() => {
-    setStep(STEP_HOME)
+  const resetFlow = () => {
+    setStep('home')
     setHelpType(null)
     setLocId(null)
     setDetails('')
-    setStatus('sent')
     setHP(null)
-  }, [])
+  }
 
-  const openHelpPoints = useCallback(() => setStep(STEP_POINTS), [])
+  const sendRequest = () => {
+    setActiveReq({ type: typeLabel, location: locLabel })
+    setStep('sent')
+  }
 
-  const openHelpPoint = useCallback((hp) => {
-    setHP(hp)
-    setStep(STEP_POINT_DETAIL)
-  }, [])
+  const cancelRequest = () => { setActiveReq(null); resetFlow() }
 
-  const startFromHP = useCallback((hp) => {
-    // Pre-set the location from the help point, then go to type selection
-    setLocId(hp.locId)
-    setStep(STEP_TYPE)
-  }, [])
-
-  const goBack = useCallback(() => {
-    if (step === STEP_TYPE) setStep(STEP_HOME)
-    else if (step === STEP_LOCATION) setStep(STEP_TYPE)
-    else if (step === STEP_SUMMARY) setStep(STEP_LOCATION)
-    else if (step === STEP_CONFIRM) setStep(STEP_SUMMARY)
-    else if (step === STEP_POINTS) setStep(STEP_HOME)
-    else if (step === STEP_POINT_DETAIL) setStep(STEP_POINTS)
-    else setStep(STEP_HOME)
-  }, [step])
-
-  // ══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="help-page">
+    <div className="screen">
+      <ScreenHeader
+        title={TITLES[step]}
+        subtitle={step === 'home' ? 'How can we assist you?' : undefined}
+        onBack={BACK_STEP[step] ? () => setStep(BACK_STEP[step]) : undefined}
+      />
 
-      {/* ── Header ── */}
-      <div className="help-header">
-        {step !== STEP_HOME && step !== STEP_SENT && (
-          <button className="help-header-back" onClick={goBack} aria-label="Back">
-            <IconBack />
-          </button>
-        )}
-        <div className="help-header-text">
-          <h1 className="help-header-title">
-            {step === STEP_HOME   ? 'Need Help?' :
-             step === STEP_TYPE   ? 'Ask for Help' :
-             step === STEP_LOCATION ? 'Where Are You?' :
-             step === STEP_SUMMARY  ? 'Help Request' :
-             step === STEP_CONFIRM  ? 'Confirm Request' :
-             step === STEP_SENT     ? 'Help Request Sent' :
-             step === STEP_POINTS   ? 'Help Points' :
-             step === STEP_POINT_DETAIL ? 'Help Point' :
-             'Help'}
-          </h1>
-          {step === STEP_HOME && (
-            <p className="help-header-sub">How can we assist you?</p>
-          )}
-        </div>
-      </div>
-
-      <div className="help-body">
-
-        {/* ═══════════════════════════════════════
-            HOME — Main menu
-        ═══════════════════════════════════════ */}
-        {step === STEP_HOME && (
-          <div className="help-home">
-
-            {/* Active request card */}
+      <main className="screen__body">
+        {step === 'home' && (
+          <>
             {activeReq && (
-              <div className="help-active-card" role="status">
-                <p className="help-active-heading">Active Help Request</p>
-                <p className="help-active-type">{activeReq.type}</p>
-                <p className="help-active-loc">{activeReq.location}</p>
-                <div className="help-active-status-row">
-                  <span className={`help-status-badge help-status--${activeReq.status}`}>
-                    {statusLabels[activeReq.status]}
-                  </span>
+              <div className="card help-active" role="status">
+                <div className="card-head">
+                  <span className="tile-icon tile-icon--green" aria-hidden="true"><Icon name="check" size={22} /></span>
+                  <div>
+                    <p className="help-active__eyebrow">Active help request</p>
+                    <p className="card__title">{activeReq.type}</p>
+                  </div>
                 </div>
-                <p className="help-active-note">Prototype request recorded. No real staff have been contacted.</p>
-                <button className="help-active-cancel" onClick={cancelRequest}>
-                  Cancel Request
-                </button>
+                <p className="help-active__loc"><Icon name="pin" size={16} /> {activeReq.location}</p>
+                <span className="badge badge--success"><span className="badge__dot" aria-hidden="true" /> Assistance requested</span>
+                <p className="help-note">Prototype request recorded. No real staff have been contacted.</p>
+                <button type="button" className="btn btn--secondary btn--sm btn--block" onClick={cancelRequest}>Cancel request</button>
               </div>
             )}
 
-            <p className="help-step-label">What do you need help with?</p>
-            <div className="help-home-options">
-              {HELP_TYPES.map(type => (
-                <button key={type.id} className={`help-type-btn help-type-btn--${type.id}`} onClick={() => selectType(type.id)}>
-                  <span className={`help-option-icon help-option-icon--${type.id}`}><HelpOptionIcon type={type.id} /></span>
-                  <span className="help-type-copy">
-                    <span className="help-type-name">{type.label}</span>
-                    <span className="help-type-desc">{type.desc}</span>
-                  </span>
-                  <span className="help-option-chevron"><ChevronRight /></span>
-                </button>
-              ))}
-            </div>
+            <section className={activeReq ? 'section' : undefined} aria-labelledby="help-types">
+              <h2 id="help-types" className="section__title" style={{ marginBottom: 12 }}>What do you need help with?</h2>
+              <TypeList onSelect={selectType} />
+            </section>
 
-            <button className="help-secondary-btn" onClick={openHelpPoints}>
-              <IconLocation />
-              <span>Find a Help Point</span>
-            </button>
-
-            {/* QR section */}
-            <div className="help-qr-section">
-              <p className="help-qr-text">
-                At a physical station Help Point, scan the QR code to quickly identify your location.
-              </p>
-              <button
-                className="help-qr-btn"
-                onClick={() => setQrMsg(true)}
-              >
-                <IconQR />
-                <span>Scan Help Point QR</span>
-              </button>
+            <section className="section" aria-label="Help points">
+              <div className="list-group">
+                <ListRow icon="pin" tone="green" title="Find a Help Point" description={`${HELP_POINTS.length} points across the station`} onClick={() => setStep('points')} />
+                <ListRow icon="qr" tone="neutral" title="Scan Help Point QR" description="Identify your location instantly" onClick={() => setQrMsg(true)} />
+              </div>
               {qrMsg && (
-                <div className="help-qr-msg" role="status">
-                  QR scanning will be available in the next version.
-                  <button className="help-qr-dismiss" onClick={() => setQrMsg(false)}>OK</button>
+                <div className="notice notice--info" role="status" style={{ marginTop: 12 }}>
+                  <Icon name="info" size={20} />
+                  <p className="notice__body">QR scanning will be available in the next version.</p>
+                  <button type="button" className="notice__close" onClick={() => setQrMsg(false)} aria-label="Dismiss">
+                    <Icon name="close" size={18} />
+                  </button>
                 </div>
               )}
-            </div>
-          </div>
+            </section>
+          </>
         )}
 
-
-        {/* ═══════════════════════════════════════
-            STEP — Select help type
-        ═══════════════════════════════════════ */}
-        {step === STEP_TYPE && (
-          <div className="help-type-list">
-            <p className="help-step-label">What do you need help with?</p>
-            {HELP_TYPES.map(t => (
-              <button
-                key={t.id}
-                className="help-type-btn"
-                onClick={() => selectType(t.id)}
-              >
-                <span className="help-type-name">{t.label}</span>
-                <span className="help-type-desc">{t.desc}</span>
-              </button>
-            ))}
-          </div>
+        {step === 'type' && (
+          <>
+            <p className="section__hint">Choose the kind of assistance you need.</p>
+            <TypeList onSelect={selectType} />
+          </>
         )}
 
-
-        {/* ═══════════════════════════════════════
-            STEP — Select location
-        ═══════════════════════════════════════ */}
-        {step === STEP_LOCATION && (
-          <div className="help-loc-list">
-            <p className="help-step-label">Where are you?</p>
-
-            <button
-              className="help-loc-btn help-loc-btn--current"
-              onClick={() => selectLocation('current')}
-            >
-              <span className="help-loc-dot" />
-              <div>
-                <span className="help-loc-name">Use Current Location</span>
-                <span className="help-loc-sub">{CURRENT_LOCATION.label}</span>
-              </div>
+        {step === 'location' && (
+          <>
+            <button type="button" className="help-current" onClick={() => selectLocation('current')}>
+              <span className="help-current__dot" aria-hidden="true" />
+              <span className="list-row__body">
+                <span className="list-row__title">Use current location</span>
+                <span className="help-current__sub">{CURRENT_LOCATION.label}</span>
+              </span>
+              <Icon name="chevronRight" size={20} />
             </button>
-
-            {LOCATION_CHOICES.map(loc => (
-              <button
-                key={loc.id}
-                className={`help-loc-btn ${locId === loc.id ? 'help-loc-btn--selected' : ''}`}
-                onClick={() => selectLocation(loc.id)}
-              >
-                <span className="help-loc-name">{loc.label}</span>
-              </button>
-            ))}
-          </div>
+            <h2 className="section__title section" style={{ marginBottom: 12 }}>Or choose a place</h2>
+            <div className="list-group">
+              {LOCATION_CHOICES.map(loc => (
+                <ListRow key={loc.id} icon="pin" tone={locId === loc.id ? 'red' : 'neutral'} title={loc.name} onClick={() => selectLocation(loc.id)} />
+              ))}
+            </div>
+          </>
         )}
 
-
-        {/* ═══════════════════════════════════════
-            STEP — Summary
-        ═══════════════════════════════════════ */}
-        {step === STEP_SUMMARY && (
-          <div className="help-summary">
-            <div className="help-summary-card">
-              <div className="help-summary-row">
-                <span className="help-summary-label">Help Needed</span>
-                <span className="help-summary-value">{typeLabel}</span>
-              </div>
-              <div className="help-summary-row">
-                <span className="help-summary-label">Location</span>
-                <span className="help-summary-value">{locLabel}</span>
-              </div>
-              <div className="help-summary-row">
-                <span className="help-summary-label">Station</span>
-                <span className="help-summary-value">{stationStr}</span>
-              </div>
-            </div>
-
-            <div className="help-section">
-              <p className="help-section-title">Additional details</p>
+        {step === 'summary' && (
+          <>
+            <SummaryList items={requestItems} />
+            <div className="section">
+              <label htmlFor="help-details" className="section__title">Additional details</label>
               <textarea
-                className="help-textarea"
-                rows="3"
+                id="help-details"
+                className="textarea"
+                rows="4"
                 maxLength={400}
                 placeholder="Tell staff anything they should know..."
                 value={details}
                 onChange={e => setDetails(e.target.value)}
-                aria-label="Additional details"
               />
+              <p className="help-count">{details.length}/400</p>
             </div>
-
-            <button className="help-btn-primary" onClick={goConfirm}>
-              Request Assistance
-            </button>
-            <button className="help-btn-secondary" onClick={resetFlow}>
-              Cancel
-            </button>
-          </div>
+            <div className="actions actions--row">
+              <button type="button" className="btn btn--secondary" onClick={resetFlow}>Cancel</button>
+              <button type="button" className="btn btn--dark" onClick={() => setStep('confirm')}>Next</button>
+            </div>
+          </>
         )}
 
-
-        {/* ═══════════════════════════════════════
-            STEP — Confirm
-        ═══════════════════════════════════════ */}
-        {step === STEP_CONFIRM && (
-          <div className="help-confirm">
-            <h2 className="help-confirm-title">Send Help Request?</h2>
-            <div className="help-summary-card">
-              <div className="help-summary-row">
-                <span className="help-summary-label">Help Needed</span>
-                <span className="help-summary-value">{typeLabel}</span>
-              </div>
-              <div className="help-summary-row">
-                <span className="help-summary-label">Location</span>
-                <span className="help-summary-value">{locLabel}</span>
-              </div>
-              <div className="help-summary-row">
-                <span className="help-summary-label">Station</span>
-                <span className="help-summary-value">{stationStr}</span>
-              </div>
-              {details.trim() && (
-                <div className="help-summary-row">
-                  <span className="help-summary-label">Details</span>
-                  <span className="help-summary-value">{details}</span>
-                </div>
-              )}
-            </div>
-            <button className="help-btn-primary" onClick={sendRequest}>
-              Send Request
-            </button>
-            <button className="help-btn-secondary" onClick={() => setStep(STEP_SUMMARY)}>
-              Cancel
-            </button>
-          </div>
-        )}
-
-
-        {/* ═══════════════════════════════════════
-            STEP — Sent / success
-        ═══════════════════════════════════════ */}
-        {step === STEP_SENT && (
-          <div className="help-sent">
-            <div className="help-sent-check"><IconCheck /></div>
-            <h2 className="help-sent-title">Help Request Sent</h2>
-            <p className="help-sent-sub">
-              Your request has been recorded.
-            </p>
-
-            <div className={`help-status-badge help-status--${status}`}>
-              {statusLabels[status]}
-            </div>
-
-            <div className="help-summary-card">
-              <div className="help-summary-row">
-                <span className="help-summary-label">Request Type</span>
-                <span className="help-summary-value">{typeLabel}</span>
-              </div>
-              <div className="help-summary-row">
-                <span className="help-summary-label">Location</span>
-                <span className="help-summary-value">{locLabel}</span>
-              </div>
-              <div className="help-summary-row">
-                <span className="help-summary-label">Status</span>
-                <span className={`help-summary-value help-val--${status}`}>
-                  {statusLabels[status]}
-                </span>
-              </div>
-            </div>
-
-            <p className="help-proto-note">
-              This is a prototype simulation. No real staff have been contacted.
-            </p>
-
-            <button className="help-btn-primary" onClick={() => navigate('/')}>
-              Back to Home
-            </button>
-            <button className="help-btn-secondary" onClick={resetFlow}>
-              New Request
-            </button>
-          </div>
-        )}
-
-
-        {/* ═══════════════════════════════════════
-            Help Points list
-        ═══════════════════════════════════════ */}
-        {step === STEP_POINTS && (
-          <div className="help-points-list">
-            <p className="help-step-label">Station help points</p>
-            {HELP_POINTS.map(hp => (
-              <button
-                key={hp.id}
-                className="help-point-btn"
-                onClick={() => openHelpPoint(hp)}
-              >
-                <div className="help-point-info">
-                  <span className="help-point-name">{formatHelpPointName(hp.name)}</span>
-                  <span className="help-point-loc">
-                    {LOCATIONS.find(location => location.id === hp.locId)?.name}
-                  </span>
-                </div>
-                <span className="help-point-arrow"><ChevronRight /></span>
+        {step === 'confirm' && (
+          <>
+            <p className="section__hint">Please review your request before sending it to station staff.</p>
+            <SummaryList items={[...requestItems, details.trim() && { label: 'Details', value: details }]} />
+            <div className="actions">
+              <button type="button" className="btn btn--dark btn--block" onClick={sendRequest}>
+                <Icon name="check" size={20} /> Send request
               </button>
-            ))}
-          </div>
-        )}
-
-
-        {/* ═══════════════════════════════════════
-            Help Point detail
-        ═══════════════════════════════════════ */}
-        {step === STEP_POINT_DETAIL && selectedHP && (
-          <div className="help-point-detail">
-            <h2 className="help-detail-name">{formatHelpPointName(selectedHP.name)}</h2>
-            <div className="help-summary-card">
-              <div className="help-summary-row">
-                <span className="help-summary-label">Location</span>
-                <span className="help-summary-value">
-                  {LOCATIONS.find(location => location.id === selectedHP.locId)?.name}
-                </span>
-              </div>
-              <div className="help-summary-row">
-                <span className="help-summary-label">Station</span>
-                <span className="help-summary-value">{stationStr}</span>
-              </div>
+              <button type="button" className="btn btn--secondary btn--block" onClick={() => setStep('summary')}>Cancel</button>
             </div>
-            <button className="help-btn-primary" onClick={() => startFromHP(selectedHP)}>
-              Ask for Help
-            </button>
-            <button className="help-btn-secondary" onClick={() => navigate('/map')}>
-              View on Map
-            </button>
-          </div>
+          </>
         )}
 
-      </div>
+        {step === 'sent' && (
+          <>
+            <div className="status-hero">
+              <span className="status-hero__icon" aria-hidden="true"><Icon name="check" size={32} strokeWidth={2.6} /></span>
+              <p className="status-hero__title">Help request sent</p>
+              <p className="status-hero__text">Your request has been recorded.</p>
+            </div>
+            <SummaryList
+              items={[
+                { label: 'Request type', value: typeLabel },
+                { label: 'Location', value: locLabel },
+                { label: 'Status', value: 'Assistance requested', tone: 'success' },
+              ]}
+            />
+            <p className="help-note">This is a prototype simulation. No real staff have been contacted.</p>
+            <div className="actions">
+              <button type="button" className="btn btn--dark btn--block" onClick={() => navigate('/')}>Back to Home</button>
+              <button type="button" className="btn btn--secondary btn--block" onClick={resetFlow}>New request</button>
+            </div>
+          </>
+        )}
+
+        {step === 'points' && (
+          <>
+            <p className="section__hint">Help Points are staffed intercoms placed around {STATION_META.name}.</p>
+            <div className="list-group">
+              {HELP_POINTS.map(hp => (
+                <ListRow
+                  key={hp.id}
+                  icon="help"
+                  tone="green"
+                  title={formatHelpPointName(hp.name)}
+                  description={locationName(hp.locId)}
+                  onClick={() => { setHP(hp); setStep('point-detail') }}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {step === 'point-detail' && selectedHP && (
+          <>
+            <div className="status-hero">
+              <span className="status-hero__icon status-hero__icon--muted" aria-hidden="true"><Icon name="help" size={30} /></span>
+              <p className="status-hero__title">{formatHelpPointName(selectedHP.name)}</p>
+            </div>
+            <SummaryList
+              items={[
+                { label: 'Location', value: locationName(selectedHP.locId) },
+                { label: 'Station', value: stationStr },
+              ]}
+            />
+            <div className="actions">
+              <button type="button" className="btn btn--dark btn--block" onClick={() => { setLocId(selectedHP.locId); setStep('type') }}>
+                <Icon name="help" size={20} /> Ask for help
+              </button>
+              <button type="button" className="btn btn--secondary btn--block" onClick={() => navigate('/map', { state: { destinationId: selectedHP.locId } })}>
+                <Icon name="map" size={20} /> View on map
+              </button>
+            </div>
+          </>
+        )}
+      </main>
 
       <BottomNav />
     </div>

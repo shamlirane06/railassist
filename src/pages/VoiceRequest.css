@@ -1,0 +1,34 @@
+.help-active { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.help-active .card-head { width: 100%; }
+.help-active__eyebrow { color: var(--ra-success); font-size: .8125rem; font-weight: 700; }
+.help-active__loc { display: inline-flex; align-items: center; gap: 6px; color: var(--ra-text-2); font-size: .9375rem; }
+
+.help-note { margin: 14px 2px 0; color: var(--ra-text-2); font-size: .875rem; }
+.help-active .help-note { margin: 0; }
+
+.help-current {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 72px;
+  padding: 14px 16px;
+  border-radius: var(--ra-radius-lg);
+  background: var(--ra-blue-tint);
+  border: 1px solid #c4dbf3;
+  color: var(--ra-navy);
+  text-align: left;
+}
+
+.help-current__dot {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ra-blue);
+  box-shadow: 0 0 0 5px rgba(25, 118, 210, .2);
+}
+
+.help-current__sub { color: var(--ra-text-2); font-size: .875rem; }
+
+.help-count { margin-top: 6px; color: var(--ra-text-3); font-size: .8125rem; text-align: right; }

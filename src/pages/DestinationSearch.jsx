@@ -2,8 +2,9 @@ import { useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import DestinationRow from '../components/DestinationRow'
+import ScreenHeader from '../components/ScreenHeader'
+import Icon from '../components/Icon'
 import { LOCATIONS, STATION_META } from '../data/stationData'
-import './Placeholder.css'
 
 function normalize(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
@@ -22,6 +23,8 @@ function matchesLocation(location, query) {
     (normalizedQuery === 'lift' && location.type === 'elevator')
 }
 
+const QUICK_TERMS = ['Platform', 'Toilet', 'Lift', 'Exit', 'Help']
+
 export default function DestinationSearch() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -37,9 +40,7 @@ export default function DestinationSearch() {
     LOCATIONS.find(location => location.type === 'exit'),
   ].filter(Boolean)
 
-  function selectDestination(location) {
-    navigate('/map', { state: { destinationId: location.id } })
-  }
+  const selectDestination = location => navigate('/map', { state: { destinationId: location.id } })
 
   function updateQuery(value) {
     const nextParams = new URLSearchParams(searchParams)
@@ -54,67 +55,69 @@ export default function DestinationSearch() {
   }
 
   return (
-    <div className="placeholder-page destination-search-page">
-      <header className="destination-search__header">
-        <button className="ra-back-button" onClick={goBack} aria-label="Back to previous screen">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-        </button>
-        <div>
-          <h1>Destination Search</h1>
-          <p>{STATION_META.name} ({STATION_META.code})</p>
-        </div>
-      </header>
+    <div className="screen">
+      <ScreenHeader
+        title="Find a destination"
+        subtitle={`${STATION_META.name} (${STATION_META.code})`}
+        onBack={goBack}
+        backLabel="Back to previous screen"
+      />
 
-      <main className="placeholder-page__body destination-search__body">
-        <form className="destination-search__form" role="search" onSubmit={event => event.preventDefault()}>
-          <div className="destination-search__field">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-4-4" />
-            </svg>
+      <main className="screen__body">
+        <form role="search" onSubmit={event => event.preventDefault()}>
+          <label className="search-field">
+            <Icon name="search" size={20} />
+            <span className="sr-only">Search destinations</span>
             <input
+              className="search-field__input"
               type="search"
               value={searchParams.get('q') ?? ''}
               onChange={event => updateQuery(event.target.value)}
               placeholder="Search platform, toilet, lift or exit"
-              aria-label="Search destinations"
+              autoComplete="off"
             />
             {query && (
-              <button type="button" className="destination-search__clear" onClick={() => updateQuery('')} aria-label="Clear search">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                  <path d="m18 6-12 12M6 6l12 12" />
-                </svg>
+              <button type="button" className="search-field__btn" onClick={() => updateQuery('')} aria-label="Clear search">
+                <Icon name="close" size={18} />
               </button>
             )}
-          </div>
+          </label>
         </form>
 
+        <div className="chip-row" style={{ marginTop: 14 }}>
+          {QUICK_TERMS.map(term => (
+            <button key={term} type="button" className="chip" onClick={() => updateQuery(term)} aria-pressed={normalize(query) === normalize(term)}>
+              {term}
+            </button>
+          ))}
+        </div>
+
         {results.length > 0 ? (
-          <section className="destination-search__results" aria-label={`Results for ${query}`}>
-            <h2 className="destination-search__section-title">Destinations</h2>
-            {results.map(location => (
-              <DestinationRow key={location.id} location={location} onClick={() => selectDestination(location)} />
-            ))}
+          <section className="section" aria-label={`Results for ${query}`}>
+            <div className="section__head">
+              <h2 className="section__title">Destinations</h2>
+              <span className="badge badge--neutral">{results.length} found</span>
+            </div>
+            <div className="list-group">
+              {results.map(location => (
+                <DestinationRow key={location.id} location={location} onClick={() => selectDestination(location)} />
+              ))}
+            </div>
           </section>
         ) : query ? (
-          <section className="destination-search__empty-state" role="status">
-            <div className="destination-search__empty-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-4-4M8 11h6" />
-              </svg>
-            </div>
-            <p className="destination-search__empty">No destination found</p>
-            <p>Try searching for a platform, toilet, lift or exit.</p>
+          <section className="status-hero" role="status" style={{ marginTop: 24 }}>
+            <span className="status-hero__icon status-hero__icon--muted" aria-hidden="true"><Icon name="search" size={30} /></span>
+            <p className="status-hero__title">No destination found</p>
+            <p className="status-hero__text">Try searching for a platform, toilet, lift or exit.</p>
           </section>
         ) : (
-          <section className="destination-search__popular" aria-label="Popular destinations">
-            <h2 className="destination-search__section-title">Popular destinations</h2>
-            {popularDestinations.map(location => (
-              <DestinationRow key={location.id} location={location} onClick={() => selectDestination(location)} />
-            ))}
+          <section className="section" aria-labelledby="popular-title">
+            <h2 id="popular-title" className="section__title" style={{ marginBottom: 12 }}>Popular destinations</h2>
+            <div className="list-group">
+              {popularDestinations.map(location => (
+                <DestinationRow key={location.id} location={location} onClick={() => selectDestination(location)} />
+              ))}
+            </div>
           </section>
         )}
       </main>

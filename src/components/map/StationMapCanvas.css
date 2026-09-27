@@ -1,0 +1,39 @@
+.smc {
+  display: block;
+  width: 100%;
+  height: 100%;
+  font-family: var(--ra-font);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.smc.is-loading { visibility: hidden; }
+
+.smc-hit { cursor: pointer; outline: none; }
+.smc-hit:hover > rect:first-of-type { filter: brightness(.97); }
+.smc-hit:focus-visible > rect { stroke: #1976d2; stroke-width: 3; }
+
+.smc-room-label { font-size: 11px; font-weight: 700; }
+.smc-room-sub { font-size: 8.5px; font-weight: 500; }
+.smc-platform-label { font-size: 11px; font-weight: 700; }
+.smc-coach { font-size: 8px; font-weight: 600; fill: #98a2b3; }
+.smc-you { font-size: 9px; font-weight: 700; fill: #ffffff; }
+.smc-zone { font-size: 10px; font-weight: 700; letter-spacing: 1.6px; fill: #98a2b3; }
+.smc-zone--sm { font-size: 8px; letter-spacing: 1.2px; fill: #667085; }
+
+.smc-pulse {
+  opacity: .16;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: smc-pulse 2.4s ease-out infinite;
+}
+
+@keyframes smc-pulse {
+  0% { transform: scale(.6); opacity: .3; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.smc-pin { animation: smc-drop .35s ease-out; }
+
+@keyframes smc-drop {
+  from { opacity: 0; transform: translateY(-10px); }
+}

@@ -1,12 +1,15 @@
 import { Outlet } from 'react-router-dom'
+import { AccessibilityProvider } from '../context/AccessibilitySettings'
 import './Layout.css'
 
 export default function Layout() {
   return (
-    <div className="layout-root">
-      <main className="layout-main">
-        <Outlet />
-      </main>
-    </div>
+    <AccessibilityProvider>
+      <div className="layout-root">
+        <div className="app-frame">
+          <Outlet />
+        </div>
+      </div>
+    </AccessibilityProvider>
   )
 }

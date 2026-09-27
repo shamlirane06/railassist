@@ -1,439 +1,67 @@
-/* ════════════════════════════════════════════════════
-   Emergency.css — RailAssist Emergency / SOS Page
-   Mobile-first, high-contrast, elderly-friendly
-════════════════════════════════════════════════════ */
+.sos-call {
+  padding: 18px;
+  border: 1px solid #f3c7c7;
+  border-radius: var(--ra-radius-lg);
+  background: var(--ra-danger-tint);
+}
+.sos-call .tile-icon { background: var(--ra-surface); }
+.sos-call__actions { margin-top: 16px; }
+.sos-call__actions > .btn { flex: 1; padding: 0 12px; }
 
-/* ── Page shell ─────────────────────────────────── */
-.sos-page {
-  display: flex;
-  flex-direction: column;
-  height: 100dvh;
-  background: #fff;
-  overflow: hidden;
-}
-
-/* ── Header ─────────────────────────────────────── */
-.sos-header {
-  background: #CC2027;
-  padding: 16px 20px 14px;
-  flex-shrink: 0;
-}
-.sos-header-title {
-  font-size: 20px;
-  font-weight: 800;
-  color: #fff;
-  margin: 0;
-  line-height: 1.2;
-}
-.sos-header-sub {
-  font-size: 14px;
-  color: rgba(255,255,255,0.85);
-  margin: 4px 0 0;
-  font-weight: 500;
-}
-
-/* ── Scrollable body ────────────────────────────── */
-.sos-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 16px 24px;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* ═══════════════════════════════════════════════════
-   STEP 1 — Emergency type selector
-═══════════════════════════════════════════════════ */
-.sos-types {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.sos-type-btn {
+.sos-selected {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px;
-  background: #fff;
-  border: 2px solid #e2e5ea;
-  border-radius: 12px;
-  text-align: left;
-  min-height: 72px;
-  transition: border-color 0.15s, background 0.15s;
-  cursor: pointer;
-}
-.sos-type-btn:hover,
-.sos-type-btn:focus {
-  border-color: #CC2027;
-  background: #fef2f2;
-  outline: none;
-}
-.sos-type-btn:active { background: #fde8e8; }
-.sos-type-btn:focus-visible { outline: 3px solid #CC2027; outline-offset: 2px; }
-
-.sos-type-icon {
-  width: 38px;
-  height: 38px;
-  flex-shrink: 0;
-  color: #CC2027;
-}
-.sos-type-icon svg { width: 100%; height: 100%; }
-
-.sos-type-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.sos-type-label {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1a1a2e;
-}
-.sos-type-desc {
-  font-size: 12px;
-  color: #5a6473;
-  line-height: 1.4;
-}
-
-/* ═══════════════════════════════════════════════════
-   STEP 2 — Details
-═══════════════════════════════════════════════════ */
-.sos-details {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* Selected type banner */
-.sos-selected-type {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: #fef2f2;
-  border: 2px solid #CC2027;
-  border-radius: 12px;
-}
-.sos-selected-icon {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  color: #CC2027;
-}
-.sos-selected-icon svg { width: 100%; height: 100%; }
-.sos-selected-label {
-  font-size: 18px;
-  font-weight: 800;
-  color: #CC2027;
-  margin: 0;
-}
-
-.sos-detail-hint {
-  font-size: 14px;
-  color: #5a6473;
-  line-height: 1.5;
-  margin: 0;
-}
-
-/* Location card */
-.sos-location-card {
-  background: #f4f5f7;
-  border: 1.5px solid #e2e5ea;
-  border-radius: 12px;
   padding: 14px 16px;
 }
-.sos-loc-station {
-  font-size: 11px;
-  color: #8a94a0;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  font-weight: 600;
-  margin: 0 0 8px;
-}
-.sos-loc-row {
+.sos-selected .text-link { flex-shrink: 0; }
+
+.sos-location {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #c4dbf3;
+  border-radius: var(--ra-radius-lg);
+  background: var(--ra-blue-tint);
 }
-.sos-loc-dot {
-  width: 14px;
-  height: 14px;
+.sos-location__dot {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0 6px 0 4px;
   border-radius: 50%;
-  background: #2563eb;
-  flex-shrink: 0;
+  background: var(--ra-blue);
+  box-shadow: 0 0 0 5px rgba(25, 118, 210, .2);
 }
-.sos-loc-label {
-  font-size: 11px;
-  color: #8a94a0;
-  font-weight: 600;
-  margin: 0;
-}
-.sos-loc-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1a1a2e;
-  margin: 0;
-}
+.sos-location__label { color: var(--ra-text-2); font-size: .8125rem; font-weight: 600; }
+.sos-location__station { color: var(--ra-text-2); font-size: .875rem; }
 
-/* Sections */
-.sos-section {
+.sos-upload {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.sos-section-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1a1a2e;
-  margin: 0;
-}
-.sos-section-hint {
-  font-size: 12px;
-  color: #8a94a0;
-  margin: 0;
-}
-
-/* Photo */
-.sos-photo-btn {
-  padding: 14px 16px;
-  background: #f4f5f7;
-  border: 1.5px dashed #b0b8cc;
-  border-radius: 10px;
-  font-size: 14px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 72px;
+  padding: 16px;
+  border: 1.5px dashed var(--ra-border-strong);
+  border-radius: var(--ra-radius-md);
+  background: var(--ra-surface);
+  color: var(--ra-text);
+  font-size: 1rem;
   font-weight: 600;
-  color: #1a3a5c;
-  min-height: 48px;
-  text-align: center;
-  transition: background 0.15s;
-  cursor: pointer;
 }
-.sos-photo-btn:hover { background: #e8ecf0; }
-.sos-file-input { display: none; }
+.sos-upload svg { color: var(--ra-text-2); }
+.sos-upload:hover { background: var(--ra-surface-muted); }
 
-.sos-photo-preview {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 8px;
-  background: #f4f5f7;
-  border: 1.5px solid #e2e5ea;
-  border-radius: 10px;
-}
-.sos-photo-img {
-  width: 80px;
-  height: 80px;
+.sos-photo { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.sos-photo__img {
+  width: 100%;
+  max-height: 220px;
   object-fit: cover;
-  border-radius: 8px;
-}
-.sos-photo-remove {
-  font-size: 13px;
-  font-weight: 600;
-  color: #CC2027;
-  padding: 4px 8px;
-  min-height: 32px;
+  border-radius: var(--ra-radius-md);
+  border: 1px solid var(--ra-border);
 }
 
-/* Textarea */
-.sos-textarea {
-  width: 100%;
-  padding: 12px 14px;
-  font-size: 15px;
-  font-family: inherit;
-  color: #1a1a2e;
-  background: #f4f5f7;
-  border: 1.5px solid #e2e5ea;
-  border-radius: 10px;
-  resize: vertical;
-  min-height: 72px;
-  transition: border-color 0.15s;
-}
-.sos-textarea:focus {
-  outline: none;
-  border-color: #CC2027;
-  background: #fff;
-}
-.sos-textarea::placeholder { color: #a0aab4; }
-
-/* ═══════════════════════════════════════════════════
-   STEP 3 — Confirmation
-═══════════════════════════════════════════════════ */
-.sos-confirm {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100%;
-  padding: 20px 0;
-}
-.sos-confirm-box {
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-}
-.sos-confirm-title {
-  font-size: 18px;
-  font-weight: 800;
-  color: #1a1a2e;
-  margin: 0 0 16px;
-  line-height: 1.35;
-}
-
-.sos-confirm-summary {
-  background: #f4f5f7;
-  border: 1.5px solid #e2e5ea;
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 20px;
-  text-align: left;
-}
-.sos-confirm-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid #e8eaee;
-}
-.sos-confirm-row:last-child { border-bottom: none; }
-.sos-confirm-label {
-  font-size: 12px;
-  color: #8a94a0;
-  font-weight: 600;
-  flex-shrink: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.sos-confirm-value {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1a1a2e;
-  text-align: right;
-  word-break: break-word;
-}
-
-/* ═══════════════════════════════════════════════════
-   STEP 4 — Sent / success
-═══════════════════════════════════════════════════ */
-.sos-sent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 16px 0;
-  gap: 8px;
-}
-
-/* Checkmark circle */
-.sos-sent-check {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: #16a34a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 4px;
-}
-.sos-sent-check svg { width: 32px; height: 32px; }
-
-.sos-sent-title {
-  font-size: 22px;
-  font-weight: 800;
-  color: #1a1a2e;
-  margin: 0;
-}
-.sos-sent-sub {
-  font-size: 14px;
-  color: #5a6473;
-  margin: 0 0 4px;
-}
-
-/* Status badge */
-.sos-status-badge {
-  display: inline-block;
-  padding: 8px 20px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 700;
-  margin: 4px 0 12px;
-  transition: background 0.3s, color 0.3s;
-}
-.sos-status--sent {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.sos-sent-summary {
-  width: 100%;
-  max-width: 380px;
-  background: #f4f5f7;
-  border: 1.5px solid #e2e5ea;
-  border-radius: 12px;
-  padding: 14px 16px;
-  text-align: left;
-  margin-bottom: 8px;
-}
-
-.sos-confirm-value--status { font-weight: 800; }
-.sos-confirm-value--status.sos-status--sent       { color: #92400e; }
-.sos-proto-note {
-  font-size: 11px;
-  color: #8a94a0;
-  font-style: italic;
-  margin: 4px 0 12px;
-  max-width: 320px;
-}
-
-/* ═══════════════════════════════════════════════════
-   Shared — Action buttons
-═══════════════════════════════════════════════════ */
-.sos-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  max-width: 380px;
-  margin-top: 4px;
-}
-.sos-btn-primary {
-  width: 100%;
-  padding: 16px;
-  background: #CC2027;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 800;
-  border-radius: 12px;
-  min-height: 54px;
-  text-align: center;
-  transition: background 0.15s;
-}
-.sos-btn-primary:hover  { background: #b01c21; }
-.sos-btn-primary:active { background: #921618; }
-.sos-btn-primary:focus-visible { outline: 3px solid #1a3a5c; outline-offset: 2px; }
-
-.sos-btn-primary--confirm { background: #CC2027; }
-
-.sos-btn-secondary {
-  width: 100%;
-  padding: 14px;
-  background: #f4f5f7;
-  color: #5a6473;
-  font-size: 15px;
-  font-weight: 600;
-  border-radius: 12px;
-  border: 1.5px solid #e2e5ea;
-  min-height: 48px;
-  text-align: center;
-  transition: background 0.15s;
-}
-.sos-btn-secondary:hover { background: #e2e5ea; }
-
-/* ═══════════════════════════════════════════════════
-   Responsive
-═══════════════════════════════════════════════════ */
-@media (min-width: 600px) {
-  .sos-header-title { font-size: 22px; }
-  .sos-body { padding: 24px 20px 32px; }
-  .sos-types { max-width: 480px; margin: 0 auto; }
-  .sos-details { max-width: 480px; margin: 0 auto; }
-  .sos-actions { margin-left: auto; margin-right: auto; }
-}
+.sos-count { margin-top: 6px; color: var(--ra-text-3); font-size: .8125rem; text-align: right; }

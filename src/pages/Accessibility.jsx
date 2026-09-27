@@ -1,438 +1,173 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
+import ScreenHeader from '../components/ScreenHeader'
+import ListRow from '../components/ListRow'
+import DestinationRow from '../components/DestinationRow'
+import Toggle from '../components/Toggle'
+import Icon from '../components/Icon'
+import { useAccessibilitySettings } from '../context/AccessibilitySettings'
 import { STATION_META, CURRENT_LOCATION, LOCATIONS } from '../data/stationData'
 import './Accessibility.css'
 
-// ── Assistance categories ──────────────────────────────────────────────────
 const CATEGORIES = [
-  {
-    id: 'wheelchair',
-    label: 'Wheelchair Access',
-    desc: 'Find lifts, accessible toilets and step-free areas.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-        <circle cx="12" cy="4" r="1.5"/>
-        <path d="M9 17a4 4 0 108 0 4 4 0 00-8 0z"/>
-        <path d="M12 12v-3h3l2 5h2"/>
-        <path d="M9 12H7"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'elderly',
-    label: 'Elderly Assistance',
-    desc: 'Get simple directions and nearby assistance.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-        <circle cx="12" cy="4" r="2"/>
-        <path d="M12 6v5l-3 8M12 11l3 8M9 11h6"/>
-        <path d="M17 21l1-3"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'visual',
-    label: 'Visual Assistance',
-    desc: 'Use larger text and voice guidance.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-        <circle cx="12" cy="12" r="3"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'hearing',
-    label: 'Hearing Assistance',
-    desc: 'Use clear visual instructions and station information.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-        <path d="M3 18v-6a9 9 0 0118 0v6"/>
-        <path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/>
-      </svg>
-    ),
-  },
+  { id: 'wheelchair', label: 'Wheelchair access', desc: 'Lifts, accessible toilets and step-free areas', icon: 'accessibility', tone: 'blue' },
+  { id: 'elderly', label: 'Elderly assistance', desc: 'Simple directions and nearby help', icon: 'elderly', tone: 'green' },
+  { id: 'visual', label: 'Visual assistance', desc: 'Larger text, contrast and voice guidance', icon: 'eye', tone: 'navy' },
+  { id: 'hearing', label: 'Hearing assistance', desc: 'Clear visual instructions and alerts', icon: 'ear', tone: 'neutral' },
 ]
 
-// ── Accessible facilities from existing data ──────────────────────────────
 const ACCESSIBLE_FACILITIES = LOCATIONS.filter(
-  l => l.accessible && ['elevator','toilet-accessible','help','entrance'].includes(l.type)
+  l => l.accessible && ['elevator', 'toilet-accessible', 'help', 'entrance'].includes(l.type),
 )
 
-// ── Elderly quick links ───────────────────────────────────────────────────
 const ELDERLY_OPTIONS = [
-  { label: 'Find a Platform',  searchQ: 'platform' },
-  { label: 'Find a Toilet',    searchQ: 'toilet' },
-  { label: 'Find an Exit',     searchQ: 'exit' },
-  { label: 'Find a Lift',      searchQ: 'lift' },
-  { label: 'Ask for Help',     path: '/voice' },
+  { label: 'Find a platform', icon: 'train', tone: 'red', query: 'Platform' },
+  { label: 'Find a toilet', icon: 'toilet', tone: 'blue', query: 'Toilet' },
+  { label: 'Find a lift', icon: 'lift', tone: 'green', query: 'Lift' },
+  { label: 'Find an exit', icon: 'exit', tone: 'navy', query: 'Exit' },
+  { label: 'Ask staff for help', icon: 'help', tone: 'green', path: '/voice' },
 ]
 
-// ── Type label lookup ─────────────────────────────────────────────────────
-const TYPE_LABELS = {
-  elevator: 'Elevator',
-  'toilet-accessible': 'Accessible Toilet',
-  help: 'Help Desk',
-  entrance: 'Main Entrance',
+const DETAIL_TITLES = {
+  wheelchair: 'Wheelchair access',
+  elderly: 'Elderly assistance',
+  visual: 'Visual assistance',
+  hearing: 'Hearing assistance',
+  settings: 'Display settings',
 }
 
-// ── Views ─────────────────────────────────────────────────────────────────
-const VIEW_MAIN     = 'main'
-const VIEW_DETAIL   = 'detail'
-const VIEW_SETTINGS = 'settings'
+function DisplaySettings() {
+  const { largeText, setLargeText, highContrast, setHighContrast, voiceGuidance, setVoiceGuidance } = useAccessibilitySettings()
+  return (
+    <div className="list-group">
+      <Toggle icon="text" label="Large text" description="Make all text bigger" checked={largeText} onChange={setLargeText} />
+      <Toggle icon="contrast" label="High contrast" description="Bolder colours and clearer text" checked={highContrast} onChange={setHighContrast} />
+      <Toggle icon="volume" label="Voice guidance" description="Read directions aloud (prototype)" checked={voiceGuidance} onChange={setVoiceGuidance} />
+    </div>
+  )
+}
 
-// ── Icon helpers ──────────────────────────────────────────────────────────
-const IconBack = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
-    <polyline points="15 18 9 12 15 6"/>
-  </svg>
-)
-
-// ══════════════════════════════════════════════════════════════════════════
 export default function Accessibility() {
   const navigate = useNavigate()
-  const [view, setView]       = useState(VIEW_MAIN)
-  const [catId, setCatId]     = useState(null)
+  const { largeText, highContrast, voiceGuidance } = useAccessibilitySettings()
+  const [view, setView] = useState('main')
+  const [visualInstructions, setVisualInstructions] = useState(false)
+  const [visualAlerts, setVisualAlerts] = useState(false)
 
-  // ── Accessibility settings (local state for prototype) ──────────────────
-  const [largeText, setLargeText]         = useState(false)
-  const [highContrast, setHighContrast]   = useState(false)
-  const [voiceGuidance, setVoiceGuidance] = useState(false)
-  const [visualInstr, setVisualInstr]     = useState(false)
-  const [showAlerts, setShowAlerts]       = useState(false)
+  const activeCount = [largeText, highContrast, voiceGuidance].filter(Boolean).length
 
-  // ── Navigation ─────────────────────────────────────────────────────────
-  const openCategory = useCallback((id) => {
-    setCatId(id)
-    setView(VIEW_DETAIL)
-  }, [])
+  function goBack() {
+    if (view !== 'main') setView('main')
+    else if (window.history.state?.idx > 0) navigate(-1)
+    else navigate('/')
+  }
 
-  const goBack = useCallback(() => {
-    setView(VIEW_MAIN)
-    setCatId(null)
-  }, [])
-
-  // ── Derived ──────────────────────────────────────────────────────────────
-  const catInfo = CATEGORIES.find(c => c.id === catId)
-
-  // Dynamic root class for accessibility overrides
-  const rootClass = [
-    'acc-page',
-    largeText    ? 'acc-page--large-text' : '',
-    highContrast ? 'acc-page--high-contrast' : '',
-  ].filter(Boolean).join(' ')
-
-  // ══════════════════════════════════════════════════════════════════════════
   return (
-    <div className={rootClass}>
+    <div className="screen">
+      <ScreenHeader
+        title={view === 'main' ? 'Accessibility' : DETAIL_TITLES[view]}
+        subtitle={view === 'main' ? 'Choose the support you need.' : undefined}
+        onBack={goBack}
+        backLabel={view === 'main' ? 'Back to previous screen' : 'Back to Accessibility'}
+      />
 
-      {/* ── Header ── */}
-      <div className="acc-header">
-        {view !== VIEW_MAIN && (
-          <button className="acc-header-back" onClick={goBack} aria-label="Back">
-            <IconBack />
-          </button>
+      <main className="screen__body">
+        {view === 'main' && (
+          <>
+            <div className="list-group">
+              {CATEGORIES.map(cat => (
+                <ListRow key={cat.id} icon={cat.icon} tone={cat.tone} title={cat.label} description={cat.desc} onClick={() => setView(cat.id)} />
+              ))}
+            </div>
+
+            <section className="section" aria-label="Display settings">
+              <div className="list-group">
+                <ListRow
+                  icon="layers"
+                  tone="neutral"
+                  title="Display settings"
+                  description="Text size, contrast and voice"
+                  meta={activeCount > 0 ? `${activeCount} on` : undefined}
+                  onClick={() => setView('settings')}
+                />
+              </div>
+            </section>
+          </>
         )}
-        <div className="acc-header-text">
-          <h1 className="acc-header-title">{view === VIEW_MAIN ? 'Accessibility' : 'Accessibility Assistance'}</h1>
-          {view === VIEW_MAIN && (
-            <p className="acc-header-sub">Choose what kind of assistance you need.</p>
-          )}
-        </div>
-        {view === VIEW_MAIN && (
-          <button
-            className="acc-settings-btn"
-            onClick={() => setView(VIEW_SETTINGS)}
-            aria-label="Accessibility settings"
-          >
-            Settings
-          </button>
-        )}
-      </div>
 
-      <div className="acc-body">
-
-        {/* ═══════════════════════════════════════════
-            MAIN — Category selection
-        ═══════════════════════════════════════════ */}
-        {view === VIEW_MAIN && (
-          <div className="acc-categories">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                className={`acc-cat-btn acc-cat-btn--${cat.id}`}
-                onClick={() => openCategory(cat.id)}
-                aria-label={cat.label}
-              >
-                <span className={`acc-cat-icon acc-cat-icon--${cat.id}`}>{cat.icon}</span>
-                <div className="acc-cat-text">
-                  <span className="acc-cat-label">{cat.label}</span>
-                  <span className="acc-cat-desc">{cat.desc}</span>
-                </div>
+        {view === 'wheelchair' && (
+          <>
+            <p className="section__hint">Step-free facilities at {STATION_META.name}. Tap one to see it on the map.</p>
+            <div className="list-group">
+              {ACCESSIBLE_FACILITIES.map(location => (
+                <DestinationRow key={location.id} location={location} onClick={() => navigate('/map', { state: { destinationId: location.id } })} />
+              ))}
+            </div>
+            <div className="notice notice--info acc-notice">
+              <Icon name="info" size={20} />
+              <p className="notice__body">Need someone to meet you? Staff can provide wheelchair assistance.</p>
+            </div>
+            <div className="actions">
+              <button type="button" className="btn btn--dark btn--block" onClick={() => navigate('/voice')}>
+                <Icon name="help" size={20} /> Request wheelchair help
               </button>
-            ))}
-          </div>
+            </div>
+          </>
         )}
 
-
-        {/* ═══════════════════════════════════════════
-            WHEELCHAIR ACCESS
-        ═══════════════════════════════════════════ */}
-        {view === VIEW_DETAIL && catId === 'wheelchair' && (
-          <div className="acc-detail">
-            <div className="acc-detail-header">
-              <span className="acc-detail-icon">{catInfo.icon}</span>
-              <h2 className="acc-detail-title">Accessible Facilities</h2>
+        {view === 'elderly' && (
+          <>
+            <div className="acc-here">
+              <span className="acc-here__dot" aria-hidden="true" />
+              <div className="list-row__body">
+                <span className="acc-here__label">You are here</span>
+                <span className="list-row__title">{CURRENT_LOCATION.label}</span>
+              </div>
             </div>
-
-            <p className="acc-detail-hint">
-              Step-free and wheelchair-accessible facilities at {STATION_META.name}.
-            </p>
-
-            <div className="acc-facility-list">
-              {ACCESSIBLE_FACILITIES.map(loc => (
-                <button
-                  key={loc.id}
-                  className="acc-facility-item"
-                  onClick={() => navigate('/map', { state: { destinationId: loc.id } })}
-                  aria-label={`${loc.name} — view on map`}
-                >
-                  <div className="acc-facility-info">
-                    <span className="acc-facility-name">{loc.name}</span>
-                    <span className="acc-facility-type">
-                      {TYPE_LABELS[loc.type] || loc.type}
-                    </span>
-                  </div>
-                  <span className="acc-facility-badge">View on Map</span>
-                </button>
+            <h2 className="section__title section" style={{ marginBottom: 12 }}>What are you looking for?</h2>
+            <div className="list-group">
+              {ELDERLY_OPTIONS.map(option => (
+                <ListRow
+                  key={option.label}
+                  icon={option.icon}
+                  tone={option.tone}
+                  title={option.label}
+                  onClick={() => navigate(option.path ?? `/search?q=${encodeURIComponent(option.query)}`)}
+                />
               ))}
             </div>
-          </div>
+          </>
         )}
 
-
-        {/* ═══════════════════════════════════════════
-            ELDERLY ASSISTANCE
-        ═══════════════════════════════════════════ */}
-        {view === VIEW_DETAIL && catId === 'elderly' && (
-          <div className="acc-detail">
-            <div className="acc-detail-header">
-              <span className="acc-detail-icon">{catInfo.icon}</span>
-              <h2 className="acc-detail-title">Simple Navigation</h2>
-            </div>
-
-            <p className="acc-detail-hint">
-              Tap what you are looking for. We will help you find it.
-            </p>
-
-            {/* Location context */}
-            <div className="acc-loc-card">
-              <p className="acc-loc-station">{STATION_META.name} ({STATION_META.code})</p>
-              <p className="acc-loc-platform">You are at: {CURRENT_LOCATION.label}</p>
-            </div>
-
-            <div className="acc-elderly-list">
-              {ELDERLY_OPTIONS.map((opt, i) => (
-                <button
-                  key={i}
-                  className="acc-elderly-btn"
-                  onClick={() => opt.path
-                    ? navigate(opt.path)
-                    : navigate(`/map`)
-                  }
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-
-        {/* ═══════════════════════════════════════════
-            VISUAL ASSISTANCE
-        ═══════════════════════════════════════════ */}
-        {view === VIEW_DETAIL && catId === 'visual' && (
-          <div className="acc-detail">
-            <div className="acc-detail-header">
-              <span className="acc-detail-icon">{catInfo.icon}</span>
-              <h2 className="acc-detail-title">Visual Assistance</h2>
-            </div>
-
-            <p className="acc-detail-hint">
-              Adjust the display to make it easier to read.
-            </p>
-
-            <div className="acc-toggle-list">
-              <label className="acc-toggle-row">
-                <div className="acc-toggle-info">
-                  <span className="acc-toggle-label">Large Text</span>
-                  <span className="acc-toggle-desc">Make all text bigger</span>
-                </div>
-                <input
-                  type="checkbox"
-                  className="acc-toggle-input"
-                  checked={largeText}
-                  onChange={() => setLargeText(v => !v)}
-                />
-                <span className={`acc-toggle-switch ${largeText ? 'acc-toggle-switch--on' : ''}`} />
-              </label>
-
-              <label className="acc-toggle-row">
-                <div className="acc-toggle-info">
-                  <span className="acc-toggle-label">High Contrast</span>
-                  <span className="acc-toggle-desc">Make colours bolder and text clearer</span>
-                </div>
-                <input
-                  type="checkbox"
-                  className="acc-toggle-input"
-                  checked={highContrast}
-                  onChange={() => setHighContrast(v => !v)}
-                />
-                <span className={`acc-toggle-switch ${highContrast ? 'acc-toggle-switch--on' : ''}`} />
-              </label>
-
-              <label className="acc-toggle-row">
-                <div className="acc-toggle-info">
-                  <span className="acc-toggle-label">Voice Guidance</span>
-                  <span className="acc-toggle-desc">Read directions aloud (prototype)</span>
-                </div>
-                <input
-                  type="checkbox"
-                  className="acc-toggle-input"
-                  checked={voiceGuidance}
-                  onChange={() => setVoiceGuidance(v => !v)}
-                />
-                <span className={`acc-toggle-switch ${voiceGuidance ? 'acc-toggle-switch--on' : ''}`} />
-              </label>
-            </div>
-
-            {(largeText || highContrast || voiceGuidance) && (
-              <div className="acc-active-note" role="status">
-                Settings applied to this page. In the full app these would apply everywhere.
+        {(view === 'visual' || view === 'settings') && (
+          <>
+            <p className="section__hint">These settings apply across the whole app.</p>
+            <DisplaySettings />
+            {view === 'settings' && (
+              <div className="actions">
+                <button type="button" className="btn btn--dark btn--block" onClick={() => setView('main')}>Done</button>
               </div>
             )}
-          </div>
+          </>
         )}
 
-
-        {/* ═══════════════════════════════════════════
-            HEARING ASSISTANCE
-        ═══════════════════════════════════════════ */}
-        {view === VIEW_DETAIL && catId === 'hearing' && (
-          <div className="acc-detail">
-            <div className="acc-detail-header">
-              <span className="acc-detail-icon">{catInfo.icon}</span>
-              <h2 className="acc-detail-title">Hearing Assistance</h2>
+        {view === 'hearing' && (
+          <>
+            <p className="section__hint">Important information will be shown on screen instead of audio.</p>
+            <div className="list-group">
+              <Toggle icon="eye" label="Visual instructions" description="Show every navigation step on screen" checked={visualInstructions} onChange={setVisualInstructions} />
+              <Toggle icon="alert" label="Visual alerts" description="Show platform and train alerts on screen" checked={visualAlerts} onChange={setVisualAlerts} />
             </div>
-
-            <p className="acc-detail-hint">
-              All important information will be shown on screen instead of audio.
-            </p>
-
-            <div className="acc-toggle-list">
-              <label className="acc-toggle-row">
-                <div className="acc-toggle-info">
-                  <span className="acc-toggle-label">Visual Instructions</span>
-                  <span className="acc-toggle-desc">Show all navigation steps on screen</span>
-                </div>
-                <input
-                  type="checkbox"
-                  className="acc-toggle-input"
-                  checked={visualInstr}
-                  onChange={() => setVisualInstr(v => !v)}
-                />
-                <span className={`acc-toggle-switch ${visualInstr ? 'acc-toggle-switch--on' : ''}`} />
-              </label>
-
-              <label className="acc-toggle-row">
-                <div className="acc-toggle-info">
-                  <span className="acc-toggle-label">Show Important Alerts</span>
-                  <span className="acc-toggle-desc">Display platform and train alerts visually</span>
-                </div>
-                <input
-                  type="checkbox"
-                  className="acc-toggle-input"
-                  checked={showAlerts}
-                  onChange={() => setShowAlerts(v => !v)}
-                />
-                <span className={`acc-toggle-switch ${showAlerts ? 'acc-toggle-switch--on' : ''}`} />
-              </label>
-            </div>
-
-            {(visualInstr || showAlerts) && (
-              <div className="acc-active-note" role="status">
-                Hearing assistance preferences saved for this session.
+            {(visualInstructions || visualAlerts) && (
+              <div className="notice notice--info acc-notice" role="status">
+                <Icon name="check" size={20} />
+                <p className="notice__body">Hearing preferences saved for this session.</p>
               </div>
             )}
-          </div>
+          </>
         )}
-
-
-        {/* ═══════════════════════════════════════════
-            SETTINGS
-        ═══════════════════════════════════════════ */}
-        {view === VIEW_SETTINGS && (
-          <div className="acc-detail">
-            <h2 className="acc-detail-title">Accessibility Settings</h2>
-
-            <p className="acc-detail-hint">
-              Adjust these settings to improve your experience at the station.
-            </p>
-
-            <div className="acc-toggle-list">
-              <label className="acc-toggle-row">
-                <div className="acc-toggle-info">
-                  <span className="acc-toggle-label">Large Text</span>
-                  <span className="acc-toggle-desc">Make all text bigger</span>
-                </div>
-                <input
-                  type="checkbox"
-                  className="acc-toggle-input"
-                  checked={largeText}
-                  onChange={() => setLargeText(v => !v)}
-                />
-                <span className={`acc-toggle-switch ${largeText ? 'acc-toggle-switch--on' : ''}`} />
-              </label>
-
-              <label className="acc-toggle-row">
-                <div className="acc-toggle-info">
-                  <span className="acc-toggle-label">High Contrast</span>
-                  <span className="acc-toggle-desc">Make colours bolder and text clearer</span>
-                </div>
-                <input
-                  type="checkbox"
-                  className="acc-toggle-input"
-                  checked={highContrast}
-                  onChange={() => setHighContrast(v => !v)}
-                />
-                <span className={`acc-toggle-switch ${highContrast ? 'acc-toggle-switch--on' : ''}`} />
-              </label>
-
-              <label className="acc-toggle-row">
-                <div className="acc-toggle-info">
-                  <span className="acc-toggle-label">Voice Guidance</span>
-                  <span className="acc-toggle-desc">Read directions aloud (prototype)</span>
-                </div>
-                <input
-                  type="checkbox"
-                  className="acc-toggle-input"
-                  checked={voiceGuidance}
-                  onChange={() => setVoiceGuidance(v => !v)}
-                />
-                <span className={`acc-toggle-switch ${voiceGuidance ? 'acc-toggle-switch--on' : ''}`} />
-              </label>
-            </div>
-
-            <button className="acc-done-btn" onClick={goBack}>
-              Done
-            </button>
-          </div>
-        )}
-
-      </div>
+      </main>
 
       <BottomNav />
     </div>
