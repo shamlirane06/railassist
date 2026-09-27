@@ -30,6 +30,8 @@ const STEP_SENT     = 'sent'
 const STEP_POINTS   = 'points'
 const STEP_POINT_DETAIL = 'point-detail'
 
+const formatHelpPointName = name => name.replace(/(\d+)$/, number => number.padStart(2, '0'))
+
 // ── SVG icons ──────────────────────────────────────────────────────────────
 const IconBack = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -51,6 +53,17 @@ const IconLocation = () => (
     <circle cx="12" cy="9" r="2.5"/>
   </svg>
 )
+const HelpOptionIcon = ({ type }) => {
+  const icons = {
+    directions: <><path d="M4 20 20 4M7 4h13v13"/><path d="M4 9V4h5"/></>,
+    elderly: <><circle cx="12" cy="4" r="2"/><path d="M12 6v6l-3 8m3-8 4 8m-7-8h6"/></>,
+    wheelchair: <><circle cx="12" cy="4" r="2"/><path d="M12 7v5h5l2 5m-9-5a5 5 0 1 0 5 5"/></>,
+    'lost-item': <><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1.1-1.5 2.5M12 17h.01"/></>,
+    porter: <><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 8V5h6v3M8 20v2m8-2v2"/></>,
+    other: <><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></>,
+  }
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icons[type]}</svg>
+}
 const IconQR = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
        stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -88,8 +101,7 @@ export default function VoiceRequest() {
     : LOCATIONS.find(l => l.id === locId)?.name || ''
 
   const statusLabels = {
-    sent:     'Request Sent',
-    assigned: 'Staff Assigned',
+    sent:     'Assistance requested',
   }
 
   // ── Actions ────────────────────────────────────────────────────────────
@@ -109,12 +121,6 @@ export default function VoiceRequest() {
     setStatus('sent')
     setStep(STEP_SENT)
     setActiveReq({ type: typeLabel, location: locLabel, status: 'sent' })
-
-    // Simulate staff assignment after 3s
-    setTimeout(() => {
-      setStatus('assigned')
-      setActiveReq(prev => prev ? { ...prev, status: 'assigned' } : null)
-    }, 3000)
   }, [typeLabel, locLabel])
 
   const cancelRequest = useCallback(() => {
@@ -178,7 +184,7 @@ export default function VoiceRequest() {
              'Help'}
           </h1>
           {step === STEP_HOME && (
-            <p className="help-header-sub">Get assistance from station staff.</p>
+            <p className="help-header-sub">How can we assist you?</p>
           )}
         </div>
       </div>
@@ -202,20 +208,26 @@ export default function VoiceRequest() {
                     {statusLabels[activeReq.status]}
                   </span>
                 </div>
-                {activeReq.status === 'assigned' && (
-                  <p className="help-active-note">Station staff are responding to your request.</p>
-                )}
+                <p className="help-active-note">Prototype request recorded. No real staff have been contacted.</p>
                 <button className="help-active-cancel" onClick={cancelRequest}>
                   Cancel Request
                 </button>
               </div>
             )}
 
-            {/* Primary actions */}
-            <button className="help-primary-btn" onClick={() => setStep(STEP_TYPE)}>
-              <IconHelp />
-              <span>Ask for Help</span>
-            </button>
+            <p className="help-step-label">What do you need help with?</p>
+            <div className="help-home-options">
+              {HELP_TYPES.map(type => (
+                <button key={type.id} className="help-type-btn" onClick={() => selectType(type.id)}>
+                  <span className="help-option-icon"><HelpOptionIcon type={type.id} /></span>
+                  <span className="help-type-copy">
+                    <span className="help-type-name">{type.label}</span>
+                    <span className="help-type-desc">{type.desc}</span>
+                  </span>
+                  <span className="help-option-chevron" aria-hidden="true">›</span>
+                </button>
+              ))}
+            </div>
 
             <button className="help-secondary-btn" onClick={openHelpPoints}>
               <IconLocation />
@@ -383,7 +395,7 @@ export default function VoiceRequest() {
             <div className="help-sent-check"><IconCheck /></div>
             <h2 className="help-sent-title">Help Request Sent</h2>
             <p className="help-sent-sub">
-              Your request has been shared with station assistance staff.
+              Your request has been recorded.
             </p>
 
             <div className={`help-status-badge help-status--${status}`}>
@@ -406,12 +418,6 @@ export default function VoiceRequest() {
                 </span>
               </div>
             </div>
-
-            {status === 'assigned' && (
-              <p className="help-staff-note">
-                Station staff are responding to your request.
-              </p>
-            )}
 
             <p className="help-proto-note">
               This is a prototype simulation. No real staff have been contacted.
@@ -440,7 +446,7 @@ export default function VoiceRequest() {
                 onClick={() => openHelpPoint(hp)}
               >
                 <div className="help-point-info">
-                  <span className="help-point-name">{hp.name}</span>
+                  <span className="help-point-name">{formatHelpPointName(hp.name)}</span>
                   <span className="help-point-loc">
                     {LOCATIONS.find(location => location.id === hp.locId)?.name}
                   </span>
@@ -457,11 +463,13 @@ export default function VoiceRequest() {
         ═══════════════════════════════════════ */}
         {step === STEP_POINT_DETAIL && selectedHP && (
           <div className="help-point-detail">
-            <h2 className="help-detail-name">{selectedHP.name}</h2>
+            <h2 className="help-detail-name">{formatHelpPointName(selectedHP.name)}</h2>
             <div className="help-summary-card">
               <div className="help-summary-row">
                 <span className="help-summary-label">Location</span>
-                <span className="help-summary-value">{selectedHP.location}</span>
+                <span className="help-summary-value">
+                  {LOCATIONS.find(location => location.id === selectedHP.locId)?.name}
+                </span>
               </div>
               <div className="help-summary-row">
                 <span className="help-summary-label">Station</span>

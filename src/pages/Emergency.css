@@ -361,14 +361,6 @@
   background: #fef3c7;
   color: #92400e;
 }
-.sos-status--responding {
-  background: #dbeafe;
-  color: #1e40af;
-}
-.sos-status--arriving {
-  background: #dcfce7;
-  color: #166534;
-}
 
 .sos-sent-summary {
   width: 100%;
@@ -383,19 +375,6 @@
 
 .sos-confirm-value--status { font-weight: 800; }
 .sos-confirm-value--status.sos-status--sent       { color: #92400e; }
-.sos-confirm-value--status.sos-status--responding  { color: #1e40af; }
-.sos-confirm-value--status.sos-status--arriving    { color: #166534; }
-
-.sos-staff-note {
-  font-size: 13px;
-  color: #166534;
-  background: #dcfce7;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-weight: 600;
-  margin: 4px 0 8px;
-}
-
 .sos-proto-note {
   font-size: 11px;
   color: #8a94a0;

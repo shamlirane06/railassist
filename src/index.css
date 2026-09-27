@@ -9,33 +9,59 @@
 }
 
 :root {
-  --color-primary:       #CC2027;
-  --color-primary-dark:  #a51a1f;
-  --color-primary-light: #f9e8e8;
-  --color-navy:          #1a3a5c;
-  --color-blue-card:     #1a4b8c;
-  --color-blue-light:    #e8f0fb;
-  --color-green:         #2e9e5b;
-  --color-green-light:   #e6f7ee;
-  --color-amber:         #f59e0b;
-  --color-bg:            #f4f5f7;
-  --color-surface:       #ffffff;
-  --color-border:        #e2e5ea;
-  --color-text:          #1a1a2e;
-  --color-text-secondary:#5a6473;
-  --color-text-muted:    #8a94a0;
-  --color-sos:           #CC2027;
+  --ra-primary: #b4232f;
+  --ra-primary-dark: #8f1d27;
+  --ra-primary-light: #fbecee;
+  --ra-background: #f7f8fa;
+  --ra-surface: #ffffff;
+  --ra-surface-soft: #f8f9fb;
+  --ra-text: #172033;
+  --ra-text-secondary: #667085;
+  --ra-text-muted: #667085;
+  --ra-border: #e6e8ec;
+  --ra-success: #1f9d72;
+  --ra-warning: #e7a91a;
+  --ra-danger: #c62828;
+  --ra-navy: #18364b;
+  --ra-radius-sm: 10px;
+  --ra-radius-md: 14px;
+  --ra-radius-lg: 18px;
+  --ra-shadow-sm: 0 1px 2px rgba(23, 43, 59, .06);
+  --ra-shadow-md: 0 4px 18px rgba(16, 24, 40, .06);
+  --ra-space-1: 4px;
+  --ra-space-2: 8px;
+  --ra-space-3: 12px;
+  --ra-space-4: 16px;
+  --ra-space-5: 20px;
+  --ra-space-6: 24px;
+  --ra-space-8: 32px;
+  --ra-space-10: 40px;
 
-  --radius-sm:  6px;
-  --radius-md:  12px;
-  --radius-lg:  16px;
-  --radius-xl:  24px;
-
-  --shadow-sm:  0 1px 3px rgba(0,0,0,.08);
-  --shadow-md:  0 4px 12px rgba(0,0,0,.10);
-  --shadow-lg:  0 8px 24px rgba(0,0,0,.12);
-
-  --font-base: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  /* Compatibility aliases for the existing page styles. */
+  --color-primary: var(--ra-primary);
+  --color-primary-dark: var(--ra-primary-dark);
+  --color-primary-light: var(--ra-primary-light);
+  --color-navy: var(--ra-navy);
+  --color-blue-card: var(--ra-navy);
+  --color-blue-light: #eaf0f4;
+  --color-green: var(--ra-success);
+  --color-green-light: #e9f4ee;
+  --color-amber: #b7791f;
+  --color-bg: var(--ra-background);
+  --color-surface: var(--ra-surface);
+  --color-border: var(--ra-border);
+  --color-text: var(--ra-text);
+  --color-text-secondary: var(--ra-text-secondary);
+  --color-text-muted: var(--ra-text-muted);
+  --color-sos: var(--ra-danger);
+  --radius-sm: var(--ra-radius-sm);
+  --radius-md: var(--ra-radius-md);
+  --radius-lg: var(--ra-radius-lg);
+  --radius-xl: 20px;
+  --shadow-sm: var(--ra-shadow-sm);
+  --shadow-md: var(--ra-shadow-md);
+  --shadow-lg: 0 12px 28px rgba(23, 43, 59, .1);
+  --font-base: Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
 html, body, #root {
@@ -47,7 +73,7 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 a { text-decoration: none; color: inherit; }

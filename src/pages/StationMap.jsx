@@ -33,12 +33,12 @@ const PLATFORM_IDS = new Set(PLATFORM_STRIPS.map(p => p.id))
 
 // ── Category-based destination picker ──────────────────────────────────────
 const CATEGORIES = [
-  { key: 'platforms', label: 'Platforms', icon: '🚆', matches: location => location.type === 'platform' },
-  { key: 'exits', label: 'Exits', icon: '🚪', matches: location => location.type === 'exit' || location.type === 'entrance' },
-  { key: 'toilets', label: 'Toilets', icon: '🚻', matches: location => location.type === 'toilet' || location.type === 'toilet-accessible' },
-  { key: 'lifts', label: 'Lifts', icon: '⇅', matches: location => location.type === 'elevator' },
-  { key: 'help', label: 'Help Desk', icon: '?', matches: location => location.type === 'help' },
-  { key: 'facilities', label: 'Facilities', icon: '🏛', matches: location => ['facility', 'information', 'escalator', 'stairs'].includes(location.type) },
+  { key: 'platforms', label: 'Platforms', icon: 'train', matches: location => location.type === 'platform' },
+  { key: 'exits', label: 'Exits', icon: 'exit', matches: location => location.type === 'exit' || location.type === 'entrance' },
+  { key: 'toilets', label: 'Toilets', icon: 'toilet', matches: location => location.type === 'toilet' || location.type === 'toilet-accessible' },
+  { key: 'lifts', label: 'Lifts', icon: 'lift', matches: location => location.type === 'elevator' },
+  { key: 'help', label: 'Help Desk', icon: 'help', matches: location => location.type === 'help' },
+  { key: 'facilities', label: 'Facilities', icon: 'building', matches: location => ['facility', 'information', 'escalator', 'stairs'].includes(location.type) },
 ]
 
 // Search aliases so "lift" matches "Elevator", etc.
@@ -72,6 +72,17 @@ const IconBack = () => (
     <polyline points="15 18 9 12 15 6"/>
   </svg>
 )
+const MapCategoryIcon = ({ name }) => {
+  const shapes = {
+    train: <><rect x="5" y="3" width="14" height="16" rx="3"/><path d="M8 19l-2 3M16 19l2 3M5 10h14"/><circle cx="9" cy="15" r="1"/><circle cx="15" cy="15" r="1"/></>,
+    exit: <><path d="M13 4H5v16h8M10 12h10m-4-4 4 4-4 4"/></>,
+    toilet: <><path d="M5 10h14l-2 8H7l-2-8ZM8 18v3m8-3v3M8 6a2 2 0 1 0 4 0V3H8v3Zm4 0a2 2 0 1 0 4 0V3h-4v3Z"/></>,
+    lift: <><rect x="5" y="3" width="14" height="18" rx="2"/><path d="m9 9 3-3 3 3m-6 6 3 3 3-3"/></>,
+    help: <><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.7 1.5c-.8 1-2.2 1.2-2.2 2.8m0 3h.01"/></>,
+    building: <><path d="M4 21V5l8-2 8 2v16M8 8h1m6 0h1M8 12h1m6 0h1M10 21v-5h4v5"/></>,
+  }
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{shapes[name]}</svg>
+}
 
 // ── Helper ─────────────────────────────────────────────────────────────────
 function clampVb({ x, y, w, h }) {
@@ -176,6 +187,11 @@ export default function StationMap() {
   const viewBoxStr = `${vb.x} ${vb.y} ${vb.w} ${vb.h}`
   const destLoc    = destId ? LOCATIONS.find(l => l.id === destId) : null
 
+  const focusDestination = useCallback(() => {
+    if (!destLoc) return
+    setVb(clampVb({ x: destLoc.x - 200, y: destLoc.y - 130, w: 400, h: 280 }))
+  }, [destLoc])
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="smap">
@@ -215,8 +231,8 @@ export default function StationMap() {
             {results.map(r => (
               <li key={r.id} role="option">
                 <button className="smap-result-btn" onClick={() => pickResult(r)}>
-                  <span className="smap-result-tag">{TYPE_LABELS[r.type] || r.type}</span>
                   <span className="smap-result-name">{r.name}</span>
+                  <span className="smap-result-tag">{TYPE_LABELS[r.type] || r.type}</span>
                 </button>
               </li>
             ))}
@@ -241,7 +257,7 @@ export default function StationMap() {
                     onClick={() => setActiveCat(cat.key)}
                     aria-label={cat.label}
                   >
-                    <span className="smap-cat-icon">{cat.icon}</span>
+                    <span className="smap-cat-icon"><MapCategoryIcon name={cat.icon} /></span>
                     <span className="smap-cat-label">{cat.label}</span>
                   </button>
                 ))}
@@ -293,16 +309,16 @@ export default function StationMap() {
               STATION SHELL
           ════════════════════════════════════════ */}
           {/* Outer ground */}
-          <rect x="0" y="0" width="900" height="620" fill="#d8d2c8"/>
+          <rect x="0" y="0" width="900" height="620" fill="#e6ebef"/>
           {/* Station floor */}
-          <rect x="10" y="10" width="880" height="600" fill="#f4f2ec" stroke="#555" strokeWidth="2.5" rx="3"/>
+          <rect x="10" y="10" width="880" height="600" fill="#fff" stroke="#83919f" strokeWidth="2.5" rx="3"/>
 
 
           {/* ════════════════════════════════════════
               CONCOURSE LEVEL (y: 12–204)
           ════════════════════════════════════════ */}
-          <rect x="12" y="12" width="876" height="192" fill="#e2eaf5" stroke="#8aa0b8" strokeWidth="1.5"/>
-          <text x="450" y="23" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="#4a6a8a" letterSpacing="2">
+          <rect x="12" y="12" width="876" height="192" fill="#f0f4f7" stroke="#c5ced7" strokeWidth="1.5"/>
+            <text x="450" y="23" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="#536273" letterSpacing="2">
             CONCOURSE LEVEL
           </text>
 
@@ -390,9 +406,8 @@ export default function StationMap() {
             <rect x="95" y="112" width="100" height="70" rx="3"
                   fill={selected?.id === 'accessible-toilet' ? '#fde8e8' : '#f0e8ff'}
                   stroke={selected?.id === 'accessible-toilet' ? '#CC2027' : '#9333ea'} strokeWidth="1.5"/>
-            <text x="145" y="140" textAnchor="middle" fontSize="22" fill="#7e22ce">♿</text>
-            <text x="145" y="156" textAnchor="middle" fontSize="8" fontWeight="700" fill="#7e22ce">ACCESSIBLE</text>
-            <text x="145" y="168" textAnchor="middle" fontSize="8" fontWeight="700" fill="#7e22ce">WC</text>
+            <text x="145" y="145" textAnchor="middle" fontSize="10" fontWeight="800" fill="#7e22ce">ACCESSIBLE</text>
+            <text x="145" y="161" textAnchor="middle" fontSize="9" fontWeight="700" fill="#7e22ce">TOILET</text>
           </g>
 
           {/* ── Normal Toilet ── */}
@@ -411,7 +426,7 @@ export default function StationMap() {
                   stroke={selected?.id === 'elevator' ? '#CC2027' : '#3b82f6'} strokeWidth="1.5"/>
             <text x="342" y="140" textAnchor="middle" fontSize="20" fill="#1d4ed8">⇅</text>
             <text x="342" y="156" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#1d4ed8">ELEVATOR</text>
-            <text x="342" y="170" textAnchor="middle" fontSize="9" fill="#3b82f6">♿</text>
+            <text x="342" y="170" textAnchor="middle" fontSize="7" fontWeight="700" fill="#3b82f6">STEP-FREE</text>
           </g>
 
           {/* ── Stairs ── */}
@@ -432,7 +447,7 @@ export default function StationMap() {
                   stroke={selected?.id === 'escalator' ? '#CC2027' : '#16a34a'} strokeWidth="1.5"/>
             <text x="511" y="140" textAnchor="middle" fontSize="20" fill="#15803d">⇅</text>
             <text x="511" y="156" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#15803d">ESCALATOR</text>
-            <text x="511" y="170" textAnchor="middle" fontSize="9" fill="#16a34a">♿</text>
+            <text x="511" y="170" textAnchor="middle" fontSize="7" fontWeight="700" fill="#16a34a">STEP-FREE</text>
           </g>
 
           {/* ── Main Entrance ── */}
@@ -440,7 +455,7 @@ export default function StationMap() {
             <rect x="557" y="116" width="182" height="72" rx="3"
                   fill={selected?.id === 'main-entrance' ? '#991b1b' : '#CC2027'} opacity="0.92"/>
             <text x="648" y="148" textAnchor="middle" fontSize="12" fontWeight="800" fill="#fff">MAIN ENTRANCE</text>
-            <text x="648" y="164" textAnchor="middle" fontSize="8.5" fill="rgba(255,255,255,0.85)">♿ Step-free access</text>
+            <text x="648" y="164" textAnchor="middle" fontSize="8.5" fill="rgba(255,255,255,0.85)">Step-free access</text>
             {/* door symbols */}
             <rect x="616" y="182" width="20" height="5" rx="1" fill="#fff" opacity="0.5"/>
             <rect x="646" y="182" width="20" height="5" rx="1" fill="#fff" opacity="0.5"/>
@@ -456,25 +471,25 @@ export default function StationMap() {
           {/* ════════════════════════════════════════
               PLATFORM ACCESS CORRIDOR (y: 204–222)
           ════════════════════════════════════════ */}
-          <rect x="12" y="204" width="876" height="18" fill="#c8ccd8" stroke="#999" strokeWidth="1"/>
+          <rect x="12" y="204" width="876" height="18" fill="#e2e7ec" stroke="#b9c4ce" strokeWidth="1"/>
           <text x="450" y="216" textAnchor="middle" fontSize="7" fontWeight="600"
-                fill="#555" letterSpacing="2">PLATFORM ACCESS CORRIDOR</text>
+                fill="#536273" letterSpacing="2">PLATFORM ACCESS CORRIDOR</text>
 
 
           {/* ════════════════════════════════════════
               PLATFORM ZONE BACKGROUND (y: 222–560)
           ════════════════════════════════════════ */}
-          <rect x="12" y="222" width="876" height="338" fill="#c8cac0"/>
+          <rect x="12" y="222" width="876" height="338" fill="#f1f4f6"/>
 
           {/* Left cross-corridor connecting all platforms */}
-          <rect x="12" y="222" width="76" height="338" fill="#d8dcd4" stroke="#999" strokeWidth="1"/>
+          <rect x="12" y="222" width="76" height="338" fill="#e8edf1" stroke="#bdc7d0" strokeWidth="1"/>
           <text x="50" y="400" textAnchor="middle" fontSize="7.5" fontWeight="700"
-                fill="#666" transform="rotate(-90, 50, 400)" letterSpacing="3">
+                fill="#536273" transform="rotate(-90, 50, 400)" letterSpacing="3">
             PLATFORM ACCESS
           </text>
 
           {/* Right open end (track extension indicator) */}
-          <rect x="888" y="222" width="12" height="338" fill="#b8b8b8" stroke="#999" strokeWidth="1"/>
+          <rect x="888" y="222" width="12" height="338" fill="#d5dce2" stroke="#aeb9c4" strokeWidth="1"/>
 
 
           {/* ════════════════════════════════════════
@@ -483,17 +498,17 @@ export default function StationMap() {
           {TRACK_STRIPS.map((t, i) => (
             <g key={i}>
               {/* Track ballast (gravel) */}
-              <rect x="88" y={t.y} width="800" height={t.h} fill="#7a7a78"/>
+              <rect x="88" y={t.y} width="800" height={t.h} fill="#aeb8c1"/>
               {/* Rail 1 (top rail) */}
-              <rect x="88" y={t.y + 2} width="800" height="2.5" fill="#505050"/>
+              <rect x="88" y={t.y + 2} width="800" height="2.5" fill="#596673"/>
               {/* Rail 2 (bottom rail) */}
-              <rect x="88" y={t.y + t.h - 4.5} width="800" height="2.5" fill="#505050"/>
+              <rect x="88" y={t.y + t.h - 4.5} width="800" height="2.5" fill="#596673"/>
               {/* Sleepers every 22 px */}
               {Array.from({ length: 37 }, (_, j) => (
                 <rect key={j}
                   x={88 + j * 22} y={t.y + 0.5}
                   width="3" height={t.h - 1}
-                  fill="#6a6050" opacity="0.55"/>
+                  fill="#75828d" opacity="0.55"/>
               ))}
             </g>
           ))}
@@ -514,13 +529,13 @@ export default function StationMap() {
 
                 {/* Platform surface */}
                 <rect x="88" y={p.y} width="800" height={p.h}
-                      fill={isSelected ? '#fde8e8' : isDest ? '#dcfce7' : '#f0f4ff'}
-                      stroke={isSelected ? '#CC2027' : '#7a9ab8'}
+                      fill={isSelected ? '#f9e9eb' : isDest ? '#f9e9eb' : '#fff'}
+                      stroke={isSelected || isDest ? '#b4232e' : '#c5ced7'}
                       strokeWidth={isSelected ? 2.5 : 1}/>
 
                 {/* Platform edge warning strips (yellow) */}
-                <rect x="88" y={p.y} width="800" height="4" fill="#f5c518" opacity="0.75"/>
-                <rect x="88" y={p.y + p.h - 4} width="800" height="4" fill="#f5c518" opacity="0.75"/>
+                <rect x="88" y={p.y} width="800" height="4" fill="#d8a928" opacity="0.72"/>
+                <rect x="88" y={p.y + p.h - 4} width="800" height="4" fill="#d8a928" opacity="0.72"/>
 
                 {/* Platform number — large, left side */}
                 <text x="108" y={p.y + p.h / 2 + 5}
@@ -547,7 +562,7 @@ export default function StationMap() {
                 {/* Destination badge */}
                 {isDest && (
                   <>
-                    <rect x="800" y={p.y + 5} width="60" height="20" rx="3" fill="#16a34a"/>
+                    <rect x="800" y={p.y + 5} width="60" height="20" rx="3" fill="#b4232e"/>
                     <text x="830" y={p.y + 19} textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#fff">
                       DEST.
                     </text>
@@ -562,21 +577,21 @@ export default function StationMap() {
             <line key={p.id + '-c'}
                   x1="88" y1={p.y + p.h / 2}
                   x2="68" y2={p.y + p.h / 2}
-                  stroke="#CC2027" strokeWidth="2" strokeDasharray="4 3"/>
+                  stroke="#aeb9c4" strokeWidth="2" strokeDasharray="4 3"/>
           ))}
 
 
           {/* ════════════════════════════════════════
               STATION END / SERVICE AREA (y: 540–610)
           ════════════════════════════════════════ */}
-          <rect x="12" y="540" width="876" height="68" fill="#dedad2" stroke="#999" strokeWidth="1"/>
+          <rect x="12" y="540" width="876" height="68" fill="#edf1f4" stroke="#bdc7d0" strokeWidth="1"/>
           {/* Buffer stops */}
           {PLATFORM_STRIPS.map(p => (
             <rect key={p.id + '-buf'}
                   x="878" y={p.y} width="10" height={p.h}
-                  fill="#CC2027" rx="1"/>
+                  fill="#aeb9c4" rx="1"/>
           ))}
-          <text x="450" y="576" textAnchor="middle" fontSize="8" fill="#888" letterSpacing="1">
+          <text x="450" y="576" textAnchor="middle" fontSize="8" fill="#687687" letterSpacing="1">
             ← TRACKS CONTINUE BEYOND STATION →
           </text>
 
@@ -586,9 +601,9 @@ export default function StationMap() {
           ════════════════════════════════════════ */}
           {destLoc && (
             <g>
-              <circle cx={destLoc.x} cy={destLoc.y} r="14" fill="#16a34a" opacity="0.9"/>
+              <circle cx={destLoc.x} cy={destLoc.y} r="14" fill="#b4232e" opacity="0.96"/>
               <text x={destLoc.x} y={destLoc.y + 5}
-                    textAnchor="middle" fontSize="14" fill="#fff" fontWeight="900">★</text>
+                    textAnchor="middle" fontSize="12" fill="#fff" fontWeight="800">D</text>
             </g>
           )}
 
@@ -598,10 +613,7 @@ export default function StationMap() {
           ════════════════════════════════════════ */}
           <g>
             {/* Pulse ring */}
-            <circle cx={CURRENT_LOCATION.x} cy={CURRENT_LOCATION.y} r="14" fill="#2563eb" opacity="0.18">
-              <animate attributeName="r" values="10;22;10" dur="2.5s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0.22;0.04;0.22" dur="2.5s" repeatCount="indefinite"/>
-            </circle>
+            <circle cx={CURRENT_LOCATION.x} cy={CURRENT_LOCATION.y} r="16" fill="#2563eb" opacity="0.12"/>
             {/* Blue dot */}
             <circle cx={CURRENT_LOCATION.x} cy={CURRENT_LOCATION.y} r="10" fill="#2563eb"/>
             <circle cx={CURRENT_LOCATION.x} cy={CURRENT_LOCATION.y} r="4"  fill="#fff"/>
@@ -635,8 +647,12 @@ export default function StationMap() {
         <div className="smap-controls" role="group" aria-label="Map controls">
           <button className="smap-ctrl" onClick={zoomIn}  aria-label="Zoom in"  title="Zoom in">+</button>
           <button className="smap-ctrl" onClick={zoomOut} aria-label="Zoom out" title="Zoom out">−</button>
-          <button className="smap-ctrl smap-ctrl--sm" onClick={recenter} aria-label="Recenter" title="Recenter on current location">⊙</button>
-          <button className="smap-ctrl smap-ctrl--sm" onClick={resetMap} aria-label="Reset map" title="Reset to full view">↺</button>
+          <button className="smap-ctrl smap-ctrl--sm" onClick={recenter} aria-label="Recenter" title="Recenter on current location">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+          </button>
+          <button className="smap-ctrl smap-ctrl--sm" onClick={resetMap} aria-label="Reset map" title="Reset to full view">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7"/><path d="M4 5v6h6"/></svg>
+          </button>
         </div>
       </div>
 
@@ -647,7 +663,7 @@ export default function StationMap() {
           <span>You are here</span>
         </div>
         <div className="smap-legend-item">
-          <span className="smap-legend-sym smap-legend-sym--dest">★</span>
+          <span className="smap-legend-sym smap-legend-sym--dest">D</span>
           <span>Destination</span>
         </div>
         <div className="smap-legend-item">
@@ -659,20 +675,21 @@ export default function StationMap() {
           <span>Toilet</span>
         </div>
         <div className="smap-legend-item">
-          <span className="smap-legend-sym">♿</span>
-          <span>Accessible</span>
+          <span className="smap-legend-sym smap-legend-sym--access" aria-hidden="true">A</span>
+          <span>Step-free access</span>
         </div>
       </div>
 
       {/* ── Location info panel ── */}
       {selected && (
         <div className="smap-panel" role="region" aria-label="Location information">
+          <div className="smap-sheet-handle" aria-hidden="true"><span /></div>
           <div className="smap-panel-row">
             <div className="smap-panel-info">
               <p className="smap-panel-type">{TYPE_LABELS[selected.type] || selected.type}</p>
               <h3 className="smap-panel-name">{selected.name}</h3>
               {selected.accessible && (
-                <span className="smap-panel-access">♿ Wheelchair accessible</span>
+                <span className="smap-panel-access">Wheelchair accessible</span>
               )}
             </div>
             <button className="smap-panel-close" onClick={() => setSelected(null)} aria-label="Close panel">
@@ -702,15 +719,20 @@ export default function StationMap() {
       {/* ── Destination summary card ── */}
       {destId && !selected && (
         <div className="smap-dest-card" role="region" aria-label="Destination summary">
+          <div className="smap-sheet-handle" aria-hidden="true"><span /></div>
           <p className="smap-dest-card-heading">Destination</p>
           <h3 className="smap-dest-card-name">{destLoc?.name}</h3>
           <p className="smap-dest-card-type">
             {TYPE_LABELS[destLoc?.type] || destLoc?.type}
           </p>
+          <p className="smap-dest-card-station">{STATION_META.name} ({STATION_META.code})</p>
           {destLoc?.accessible && (
-            <p className="smap-dest-row-access">♿ Wheelchair accessible</p>
+            <p className="smap-dest-row-access">Wheelchair accessible</p>
           )}
           <div className="smap-dest-actions">
+            <button className="smap-btn-view-dest" onClick={focusDestination}>
+              View on Map
+            </button>
             <button
               className="smap-btn-dest-clear"
               onClick={clearDest}

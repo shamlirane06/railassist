@@ -35,43 +35,4 @@
   line-height: 1.6;
 }
 
-.placeholder-sos-btn {
-  margin-top: 16px;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: .6px;
-  padding: 14px 32px;
-  border-radius: var(--radius-lg);
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(204,32,39,.35);
-}
-
-.destination-search__results {
-  width: 100%;
-  max-width: 360px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  text-align: left;
-}
-
-.destination-search__result {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  min-height: 56px;
-  padding: 12px 16px;
-  background: #fff;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  text-align: left;
-}
-
-.destination-search__name { font-weight: 700; }
-.destination-search__type { color: var(--color-text-secondary); font-size: 13px; }
 .destination-search__empty { font-weight: 700; }

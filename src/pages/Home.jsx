@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
-import { LOCATIONS } from '../data/stationData'
+import DestinationRow from '../components/DestinationRow'
+import { CURRENT_LOCATION, LOCATIONS, STATION_META } from '../data/stationData'
 import './Home.css'
 
 /* ── Inline SVG icons ─────────────────────────── */
@@ -84,13 +85,6 @@ const IconAccessibility = () => (
   </svg>
 )
 
-const IconProfile = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="8" r="4"/>
-    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-  </svg>
-)
-
 const IconClear = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
     <line x1="18" y1="6" x2="6" y2="18"/>
@@ -117,6 +111,8 @@ export default function Home() {
   const [showLocation, setShowLocation] = useState(false)
   const [commonCategory, setCommonCategory] = useState(null)
   const inputRef = useRef(null)
+  const activeCategory = COMMON_PLACES.find(category => category.id === commonCategory)
+  const categoryDestinations = activeCategory ? LOCATIONS.filter(activeCategory.matches) : []
 
   /* ── voice toggle (UI only – no real speech API yet) ── */
   function handleVoiceToggle() {
@@ -139,8 +135,19 @@ export default function Home() {
     <div className="home">
 
       {/* ══════════ 1. HEADER ══════════ */}
-      <header className="home-header">
-        <div className="home-header__brand">
+      {activeCategory ? (
+        <header className="home-subpage-header">
+          <button className="ra-back-button" onClick={() => setCommonCategory(null)} aria-label="Back to Home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+          </button>
+          <div>
+            <h1>{activeCategory.label}</h1>
+            <p>Central Junction ({STATION_META.code})</p>
+          </div>
+        </header>
+      ) : (
+        <header className="home-header">
+          <div className="home-header__brand">
           {/* Train logo mark */}
           <div className="home-header__logo" aria-hidden="true">
             <svg viewBox="0 0 28 28" width="18" height="18" fill="none">
@@ -154,54 +161,62 @@ export default function Home() {
           </div>
           <div>
             <span className="home-header__name">RailAssist</span>
-            <span className="home-header__station">Central Junction (CJN)</span>
+            <span className="home-header__station">{STATION_META.name} ({STATION_META.code})</span>
+            <span className="home-header__tagline">Navigating the Station Made Simple</span>
           </div>
         </div>
-        <div className="home-header__actions">
-          <button className="home-header__btn" aria-label="Accessibility settings" onClick={() => navigate('/accessibility')}>
-            <IconAccessibility />
-          </button>
-          <button className="home-header__btn home-header__btn--filled" aria-label="Profile">
-            <IconProfile />
-          </button>
-        </div>
-      </header>
+          <div className="home-header__actions">
+            <button className="home-header__btn" aria-label="Accessibility settings" onClick={() => navigate('/accessibility')}>
+              <IconAccessibility />
+            </button>
+          </div>
+        </header>
+      )}
 
       {/* ══════════ SCROLLABLE BODY ══════════ */}
       <div className="home-body">
-
-        {/* ══════════ 2. CURRENT LOCATION ══════════ */}
-        <section className="home-location" aria-label="Your current location">
-          <div className="home-location__icon" aria-hidden="true">
-            <IconLocation />
+        {activeCategory ? (
+          <main className="home-common-page-body">
+            <h2>Choose a {activeCategory.label === 'Platforms' ? 'platform' : activeCategory.label === 'Toilets' ? 'toilet' : activeCategory.label === 'Lifts' ? 'lift' : 'station exit'}</h2>
+            <div className="home-common-destinations">
+              {categoryDestinations.map(location => (
+                <DestinationRow
+                  key={location.id}
+                  location={location}
+                  onClick={() => navigate('/map', { state: { destinationId: location.id } })}
+                />
+              ))}
+            </div>
+          </main>
+        ) : (
+          <>
+        <section className="home-hero" aria-label={`${STATION_META.name} station illustration`}>
+          <svg className="home-hero-art" viewBox="0 0 720 190" role="img" aria-label="A train arriving at a station platform">
+            <rect width="720" height="190" fill="#e8f2f6" />
+            <path d="M0 132h720v58H0z" fill="#d6e1e7" />
+            <path d="M320 45h38V132h-38zm48-19h46v106h-46zm57 31h32v75h-32zm42-34h49v109h-49zm60 24h35v85h-35zm43-31h56v116h-56z" fill="#c4d7e2" />
+            <path d="M0 148h720M0 157h720" stroke="#758b99" strokeWidth="4" />
+            <path d="M18 170h684" stroke="#fff" strokeWidth="3" strokeDasharray="20 14" />
+            <g transform="translate(178 75)">
+              <path d="M0 56V34c0-10 8-18 18-18h288c15 0 28 12 31 27l8 31H0z" fill="#fff" stroke="#879aa6" strokeWidth="3" />
+              <path d="M18 24h68v27H18zm78 0h68v27H96zm78 0h68v27h-68zm78 0h41c8 0 15 7 18 16l3 11h-62z" fill="#b9d9e9" />
+              <path d="M0 58h345" stroke="#b4232f" strokeWidth="7" />
+              <circle cx="54" cy="72" r="9" fill="#435967" /><circle cx="285" cy="72" r="9" fill="#435967" />
+            </g>
+            <path d="M642 95h34v37h-34z" fill="#fff" stroke="#aab9c2" strokeWidth="2" />
+            <path d="M650 103h18m-18 8h18m-18 8h12" stroke="#b4232f" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+          <div className="home-hero-copy">
+            <span>Station overview</span>
+            <strong>{STATION_META.name}</strong>
           </div>
-          <div className="home-location__text">
-            <p className="home-location__title">You are at Central Junction</p>
-            <p className="home-location__detail">Current location: Platform 2</p>
-          </div>
-          <button
-            className="home-location__change"
-            onClick={() => setShowLocation(v => !v)}
-            aria-expanded={showLocation}
-          >
-            Change
-          </button>
         </section>
-
-        {/* Change-location callout (simulated) */}
-        {showLocation && (
-          <div className="home-location__callout" role="status">
-            Location simulation: tap a platform on the map to update your position.
-            <button className="home-location__callout-close" onClick={() => setShowLocation(false)} aria-label="Dismiss">
-              <IconClear />
-            </button>
-          </div>
-        )}
 
         {/* ══════════ 3. MAIN HEADING ══════════ */}
         <section className="home-main-heading" aria-label="Main navigation prompt">
+          <p className="home-greeting">Hello</p>
           <h1 className="home-main-heading__h1">Where do you need help?</h1>
-          <p className="home-main-heading__sub">Find a place inside the station</p>
+          <p className="home-main-heading__sub">Find your way around {STATION_META.name}.</p>
         </section>
 
         {/* ══════════ 4. SEARCH ══════════ */}
@@ -216,7 +231,7 @@ export default function Home() {
                 inputMode="search"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                placeholder="Search for a platform, toilet, lift or exit"
+                placeholder="Search platform, toilet, lift or exit"
                 aria-label="Search destination"
                 autoComplete="off"
               />
@@ -230,70 +245,67 @@ export default function Home() {
                   <IconClear />
                 </button>
               )}
+              <button
+                type="button"
+                className={`home-search__voice${voiceActive ? ' home-search__voice--active' : ''}`}
+                onClick={handleVoiceToggle}
+                aria-pressed={voiceActive}
+                aria-label={voiceActive ? 'Stop voice input' : 'Start voice input'}
+              >
+                <IconMic />
+              </button>
             </div>
           </form>
+          {voiceActive && <p className="home-search-status" role="status">Listening… Voice input is a prototype.</p>}
         </section>
 
-        {/* ══════════ 5. VOICE BUTTON ══════════ */}
-        <section className="home-voice-section" aria-label="Voice assistance">
-          <button
-            className={`home-voice__btn${voiceActive ? ' home-voice__btn--active' : ''}`}
-            onClick={handleVoiceToggle}
-            aria-pressed={voiceActive}
-            aria-label={voiceActive ? 'Stop voice input' : 'Start voice input'}
-          >
-            <span className={`home-voice__mic${voiceActive ? ' home-voice__mic--pulse' : ''}`} aria-hidden="true">
-              <IconMic />
-            </span>
-            <span className="home-voice__text-group">
-              <span className="home-voice__label">
-                {voiceActive ? 'Listening…' : 'Speak your request'}
-              </span>
-              {!voiceActive && (
-                <span className="home-voice__hint">
-                  Example: Take me to the accessible toilet
-                </span>
-              )}
-            </span>
+        {/* ══════════ 5. QUICK ACTIONS ══════════ */}
+        <section className="home-quick-actions" aria-label="Quick actions">
+          <button className="home-quick-action" onClick={() => navigate('/map')}>
+            <span className="home-quick-action__icon"><IconLocation /></span>
+            <span>Station map</span>
+          </button>
+          <button className="home-quick-action" onClick={() => navigate('/voice')}>
+            <span className="home-quick-action__icon"><IconHelp /></span>
+            <span>Ask for help</span>
           </button>
         </section>
 
         {/* ══════════ 6. COMMON PLACES ══════════ */}
         <section className="home-places-section" aria-label="Common places">
           <h2 className="home-section__heading">Common places</h2>
-          <div className="home-places__grid" role="list">
+          <div className="home-places__grid">
             {COMMON_PLACES.map(({ id, label, Icon }) => (
               <button
                 key={id}
                 className="home-place__card"
-                onClick={() => setCommonCategory(current => current === id ? null : id)}
-                aria-expanded={commonCategory === id}
+                onClick={() => setCommonCategory(id)}
                 aria-label={label}
-                role="listitem"
               >
                 <span className="home-place__icon" aria-hidden="true"><Icon /></span>
                 <span className="home-place__label">{label}</span>
               </button>
             ))}
           </div>
-          {commonCategory && (() => {
-            const category = COMMON_PLACES.find(item => item.id === commonCategory)
-            const destinations = LOCATIONS.filter(category.matches)
-            return (
-              <div className="home-common-results" aria-label={`${category.label} destinations`}>
-                {destinations.map(location => (
-                  <button
-                    className="home-common-result"
-                    key={location.id}
-                    onClick={() => navigate('/map', { state: { destinationId: location.id } })}
-                  >
-                    {location.name}
-                  </button>
-                ))}
-              </div>
-            )
-          })()}
         </section>
+
+        {/* ══════════ 7. CURRENT LOCATION ══════════ */}
+        <section className="home-location" aria-label="Your current location">
+          <div className="home-location__icon" aria-hidden="true"><IconLocation /></div>
+          <div className="home-location__text">
+            <p className="home-location__title">Current location</p>
+            <p className="home-location__detail">{CURRENT_LOCATION.label}</p>
+          </div>
+          <button className="home-location__change" onClick={() => setShowLocation(v => !v)} aria-expanded={showLocation}>
+            Change
+          </button>
+        </section>
+        {showLocation && (
+          <div className="home-location__callout" role="status">
+            Location simulation: tap a platform on the map to update your position.
+            <button className="home-location__callout-close" onClick={() => setShowLocation(false)} aria-label="Dismiss"><IconClear /></button>
+          </div>
+        )}
 
         {/* ══════════ 7. HELP ══════════ */}
         <section className="home-help-section" aria-label="Get help from staff">
@@ -325,6 +337,8 @@ export default function Home() {
 
         {/* Bottom spacing so content isn't hidden behind nav */}
         <div className="home-bottom-spacer" aria-hidden="true" />
+          </>
+        )}
       </div>
 
       {/* ══════════ 9. BOTTOM NAVIGATION ══════════ */}

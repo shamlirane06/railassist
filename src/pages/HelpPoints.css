@@ -72,26 +72,6 @@
   gap: 14px;
 }
 
-.help-primary-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-  padding: 20px 16px;
-  background: #1a3a5c;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 800;
-  border-radius: 14px;
-  min-height: 64px;
-  transition: background 0.15s;
-}
-.help-primary-btn svg { flex-shrink: 0; }
-.help-primary-btn:hover { background: #112840; }
-.help-primary-btn:active { background: #0a1f30; }
-.help-primary-btn:focus-visible { outline: 3px solid #CC2027; outline-offset: 2px; }
-
 .help-secondary-btn {
   display: flex;
   align-items: center;
@@ -451,20 +431,6 @@
 .help-status--sent {
   background: #fef3c7;
   color: #92400e;
-}
-.help-status--assigned {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.help-staff-note {
-  font-size: 13px;
-  color: #166534;
-  background: #dcfce7;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-weight: 600;
-  max-width: 340px;
 }
 .help-proto-note {
   font-size: 11px;

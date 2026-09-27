@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import { STATION_META, CURRENT_LOCATION } from '../data/stationData'
@@ -80,7 +80,6 @@ export default function Emergency() {
   const [description, setDesc]    = useState('')
   const [photo, setPhoto]         = useState(null)     // File object
   const [photoPreview, setPreview]= useState(null)     // data URL
-  const [staffStatus, setStaff]   = useState('sent')   // 'sent' | 'responding' | 'arriving'
   const fileRef = useRef(null)
 
   // ── Photo handlers ───────────────────────────────────────────────────────
@@ -102,18 +101,6 @@ export default function Emergency() {
   // ── Send request (simulated) ─────────────────────────────────────────────
   const sendRequest = useCallback(() => {
     setStep(STEP_SENT)
-    setStaff('sent')
-
-    // Simulate staff acknowledgement
-    const t1 = setTimeout(() => setStaff('responding'), 3000)
-    const t2 = setTimeout(() => setStaff('arriving'), 7000)
-
-    return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
-
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    // no-op; timeouts run in sendRequest's scope
   }, [])
 
   // ── Reset flow ───────────────────────────────────────────────────────────
@@ -122,24 +109,20 @@ export default function Emergency() {
     setType(null)
     setDesc('')
     removePhoto()
-    setStaff('sent')
   }, [removePhoto])
 
   // ── Derived ──────────────────────────────────────────────────────────────
   const typeInfo   = EMERGENCY_TYPES.find(t => t.id === type)
-  const shortLoc   = 'Platform 2'   // derived from CURRENT_LOCATION
+  const shortLoc   = CURRENT_LOCATION.label
   const stationStr = `${STATION_META.name} (${STATION_META.code})`
+  const requestStatus = 'sent'
 
   // ── Status badge helpers ─────────────────────────────────────────────────
   const statusLabel = {
-    sent:       'Help Requested',
-    responding: 'Staff Responding',
-    arriving:   'Help is On the Way',
+    sent:       'Assistance requested',
   }
   const statusClass = {
     sent:       'sos-status--sent',
-    responding: 'sos-status--responding',
-    arriving:   'sos-status--arriving',
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -192,7 +175,7 @@ export default function Emergency() {
             </div>
 
             <p className="sos-detail-hint">
-              Share your current location so station staff can find you.
+              Your current station location will be included in this prototype request.
             </p>
 
             {/* Location card */}
@@ -241,7 +224,7 @@ export default function Emergency() {
                 className="sos-textarea"
                 rows="3"
                 maxLength={500}
-                placeholder="Tell station staff what you need help with..."
+                placeholder="Add any details about what is happening..."
                 value={description}
                 onChange={e => setDesc(e.target.value)}
                 aria-label="Describe the situation"
@@ -325,11 +308,11 @@ export default function Emergency() {
             </div>
 
             <h2 className="sos-sent-title">Help Request Sent</h2>
-            <p className="sos-sent-sub">Station staff have been notified.</p>
+            <p className="sos-sent-sub">Your request has been recorded.</p>
 
             {/* Status badge */}
-            <div className={`sos-status-badge ${statusClass[staffStatus]}`}>
-              {statusLabel[staffStatus]}
+            <div className={`sos-status-badge ${statusClass[requestStatus]}`}>
+              {statusLabel[requestStatus]}
             </div>
 
             {/* Summary */}
@@ -348,17 +331,11 @@ export default function Emergency() {
               </div>
               <div className="sos-confirm-row">
                 <span className="sos-confirm-label">Status</span>
-                <span className={`sos-confirm-value sos-confirm-value--status ${statusClass[staffStatus]}`}>
-                  {statusLabel[staffStatus]}
+                <span className={`sos-confirm-value sos-confirm-value--status ${statusClass[requestStatus]}`}>
+                  {statusLabel[requestStatus]}
                 </span>
               </div>
             </div>
-
-            {staffStatus === 'arriving' && (
-              <p className="sos-staff-note">
-                Your location has been shared with station staff.
-              </p>
-            )}
 
             <p className="sos-proto-note">
               This is a prototype simulation. No real emergency services have been contacted.

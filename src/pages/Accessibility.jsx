@@ -136,7 +136,7 @@ export default function Accessibility() {
           </button>
         )}
         <div className="acc-header-text">
-          <h1 className="acc-header-title">Accessibility Assistance</h1>
+          <h1 className="acc-header-title">{view === VIEW_MAIN ? 'Accessibility' : 'Accessibility Assistance'}</h1>
           {view === VIEW_MAIN && (
             <p className="acc-header-sub">Choose what kind of assistance you need.</p>
           )}
@@ -196,7 +196,7 @@ export default function Accessibility() {
                 <button
                   key={loc.id}
                   className="acc-facility-item"
-                  onClick={() => navigate(`/map`)}
+                  onClick={() => navigate('/map', { state: { destinationId: loc.id } })}
                   aria-label={`${loc.name} — view on map`}
                 >
                   <div className="acc-facility-info">

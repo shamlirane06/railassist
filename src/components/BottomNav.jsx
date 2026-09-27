@@ -61,6 +61,7 @@ export default function BottomNav() {
             className={`bottom-nav__item${isActive ? ' bottom-nav__item--active' : ''}${item.isSOS ? ' bottom-nav__item--sos' : ''}`}
             onClick={() => navigate(item.path)}
             aria-label={item.label}
+            aria-current={isActive ? 'page' : undefined}
           >
             <span className="bottom-nav__icon">{item.icon}</span>
             <span className="bottom-nav__label">{item.label}</span>

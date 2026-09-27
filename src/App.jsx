@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import StationMap from './pages/StationMap'
@@ -21,10 +21,10 @@ function App() {
         <Route path="emergency" element={<Emergency />} />
         <Route path="staff" element={<StaffDashboard />} />
         <Route path="accessibility" element={<Accessibility />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   )
 }
 
 export default App
-
