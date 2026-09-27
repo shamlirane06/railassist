@@ -162,17 +162,17 @@ export default function Home() {
               <span className="tile-icon tile-icon--green" aria-hidden="true"><Icon name="users" size={22} /></span>
               <div>
                 <p className="card__title">Station staff assistance</p>
-                <p className="home-help__status"><span className="badge__dot" aria-hidden="true" /> Staff available now</p>
+                <p className="home-help__status"><span className="badge__dot" aria-hidden="true" /> Prototype information</p>
               </div>
             </div>
             <div className="home-help__meta">
               <div>
-                <span className="home-help__meta-label">Nearest point</span>
+                <span className="home-help__meta-label">Example help point</span>
                 <span className="home-help__meta-value"><Icon name="pin" size={16} /> Help Point 2</span>
               </div>
               <div>
                 <span className="home-help__meta-label">Response</span>
-                <span className="home-help__meta-value"><Icon name="clock" size={16} /> ~4 min</span>
+                <span className="home-help__meta-value"><Icon name="clock" size={16} /> No live ETA</span>
               </div>
             </div>
           </div>

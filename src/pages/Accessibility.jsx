@@ -13,8 +13,8 @@ import './Accessibility.css'
 const CATEGORIES = [
   { id: 'wheelchair', label: 'Wheelchair access', desc: 'Lifts, accessible toilets and step-free areas', icon: 'accessibility', tone: 'blue' },
   { id: 'elderly', label: 'Elderly assistance', desc: 'Simple directions and nearby help', icon: 'elderly', tone: 'green' },
-  { id: 'visual', label: 'Visual assistance', desc: 'Larger text, contrast and voice guidance', icon: 'eye', tone: 'navy' },
-  { id: 'hearing', label: 'Hearing assistance', desc: 'Clear visual instructions and alerts', icon: 'ear', tone: 'neutral' },
+  { id: 'visual', label: 'Visual assistance', desc: 'Larger text and contrast settings', icon: 'eye', tone: 'navy' },
+  { id: 'hearing', label: 'Hearing assistance', desc: 'Visual alerts and instructions (future feature)', icon: 'ear', tone: 'neutral' },
 ]
 
 const ACCESSIBLE_FACILITIES = LOCATIONS.filter(
@@ -38,24 +38,22 @@ const DETAIL_TITLES = {
 }
 
 function DisplaySettings() {
-  const { largeText, setLargeText, highContrast, setHighContrast, voiceGuidance, setVoiceGuidance } = useAccessibilitySettings()
+  const { largeText, setLargeText, highContrast, setHighContrast } = useAccessibilitySettings()
   return (
     <div className="list-group">
       <Toggle icon="text" label="Large text" description="Make all text bigger" checked={largeText} onChange={setLargeText} />
       <Toggle icon="contrast" label="High contrast" description="Bolder colours and clearer text" checked={highContrast} onChange={setHighContrast} />
-      <Toggle icon="volume" label="Voice guidance" description="Read directions aloud (prototype)" checked={voiceGuidance} onChange={setVoiceGuidance} />
+      <Toggle icon="volume" label="Voice guidance" description="Future feature; this prototype does not read directions aloud." checked={false} onChange={() => {}} disabled />
     </div>
   )
 }
 
 export default function Accessibility() {
   const navigate = useNavigate()
-  const { largeText, highContrast, voiceGuidance } = useAccessibilitySettings()
+  const { largeText, highContrast } = useAccessibilitySettings()
   const [view, setView] = useState('main')
-  const [visualInstructions, setVisualInstructions] = useState(false)
-  const [visualAlerts, setVisualAlerts] = useState(false)
 
-  const activeCount = [largeText, highContrast, voiceGuidance].filter(Boolean).length
+  const activeCount = [largeText, highContrast].filter(Boolean).length
 
   function goBack() {
     if (view !== 'main') setView('main')
@@ -87,7 +85,7 @@ export default function Accessibility() {
                   icon="layers"
                   tone="neutral"
                   title="Display settings"
-                  description="Text size, contrast and voice"
+                  description="Text size and contrast"
                   meta={activeCount > 0 ? `${activeCount} on` : undefined}
                   onClick={() => setView('settings')}
                 />
@@ -154,17 +152,11 @@ export default function Accessibility() {
 
         {view === 'hearing' && (
           <>
-            <p className="section__hint">Important information will be shown on screen instead of audio.</p>
+            <p className="section__hint">These visual assistance options are future features and are not active in this prototype.</p>
             <div className="list-group">
-              <Toggle icon="eye" label="Visual instructions" description="Show every navigation step on screen" checked={visualInstructions} onChange={setVisualInstructions} />
-              <Toggle icon="alert" label="Visual alerts" description="Show platform and train alerts on screen" checked={visualAlerts} onChange={setVisualAlerts} />
+              <Toggle icon="eye" label="Visual instructions" description="Future feature; navigation steps are not displayed." checked={false} onChange={() => {}} disabled />
+              <Toggle icon="alert" label="Visual alerts" description="Future feature; platform and train alerts are not connected." checked={false} onChange={() => {}} disabled />
             </div>
-            {(visualInstructions || visualAlerts) && (
-              <div className="notice notice--info acc-notice" role="status">
-                <Icon name="check" size={20} />
-                <p className="notice__body">Hearing preferences saved for this session.</p>
-              </div>
-            )}
           </>
         )}
       </main>

@@ -89,8 +89,8 @@ export function useMapCamera({ occluderRef, home }) {
 
   const focus = useCallback((point, { minScale } = {}) => {
     const { size: sz, cam: current } = live.current
-    if (!sz) return
     focusTarget.current = { point, minScale }
+    if (!sz) return
     const s = Math.max(current?.s ?? 0, minScale ?? sz.w / 300)
     animateTo({ x: point.x, y: point.y, s })
   }, [animateTo])
@@ -129,7 +129,15 @@ export function useMapCamera({ occluderRef, home }) {
   useEffect(() => {
     if (!size) return
     if (!live.current.cam) {
-      setCam(clampCam({ x: home.x, y: home.y, s: defaultScale(size, inset) }, size, inset))
+      const target = focusTarget.current
+      const initialCam = target
+        ? {
+            x: target.point.x,
+            y: target.point.y,
+            s: Math.max(defaultScale(size, inset), target.minScale ?? size.w / 300),
+          }
+        : { x: home.x, y: home.y, s: defaultScale(size, inset) }
+      setCam(clampCam(initialCam, size, inset))
       return
     }
     if (focusTarget.current) {

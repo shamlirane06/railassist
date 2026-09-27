@@ -5,7 +5,6 @@ const AccessibilitySettingsContext = createContext(null)
 export function AccessibilityProvider({ children }) {
   const [largeText, setLargeText] = useState(false)
   const [highContrast, setHighContrast] = useState(false)
-  const [voiceGuidance, setVoiceGuidance] = useState(false)
 
   // Applied on <html> so rem-based type scales and contrast tokens switch app-wide.
   useEffect(() => {
@@ -17,8 +16,7 @@ export function AccessibilityProvider({ children }) {
   const value = useMemo(() => ({
     largeText, setLargeText,
     highContrast, setHighContrast,
-    voiceGuidance, setVoiceGuidance,
-  }), [largeText, highContrast, voiceGuidance])
+  }), [largeText, highContrast])
 
   return (
     <AccessibilitySettingsContext.Provider value={value}>

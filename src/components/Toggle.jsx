@@ -1,6 +1,6 @@
 import Icon from './Icon'
 
-export default function Toggle({ icon, label, description, checked, onChange }) {
+export default function Toggle({ icon, label, description, checked, onChange, disabled = false }) {
   return (
     <label className="toggle-row">
       {icon && (
@@ -17,6 +17,7 @@ export default function Toggle({ icon, label, description, checked, onChange }) 
         role="switch"
         className="toggle-row__input"
         checked={checked}
+        disabled={disabled}
         onChange={event => onChange(event.target.checked)}
       />
       <span className="toggle-row__switch" aria-hidden="true" />

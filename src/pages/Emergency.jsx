@@ -20,7 +20,7 @@ const TITLES = {
   select: 'Emergency help',
   details: 'Add details',
   confirm: 'Confirm request',
-  sent: 'Request sent',
+  sent: 'Demo complete',
 }
 
 const BACK_STEP = { details: 'select', confirm: 'details' }
@@ -107,7 +107,7 @@ export default function Emergency() {
           <>
             <CallCard />
             <section className="section" aria-labelledby="sos-types">
-              <h2 id="sos-types" className="section__title" style={{ marginBottom: 12 }}>Alert station staff</h2>
+              <h2 id="sos-types" className="section__title" style={{ marginBottom: 12 }}>Choose an emergency type</h2>
               <div className="list-group">
                 {EMERGENCY_TYPES.map(type => (
                   <ListRow
@@ -193,7 +193,7 @@ export default function Emergency() {
 
         {step === 'confirm' && typeInfo && (
           <>
-            <p className="section__hint">Station staff will be alerted to your location right away.</p>
+            <p className="section__hint">Prototype only: this will not notify station staff or emergency services.</p>
             <SummaryList
               items={[
                 ...summaryItems,
@@ -203,7 +203,7 @@ export default function Emergency() {
             />
             <div className="actions">
               <button type="button" className="btn btn--danger btn--block" onClick={() => setStep('sent')}>
-                <Icon name="siren" size={20} /> Send emergency request
+                <Icon name="siren" size={20} /> Record demo request
               </button>
               <button type="button" className="btn btn--secondary btn--block" onClick={() => setStep('details')}>Go back</button>
             </div>
@@ -214,13 +214,13 @@ export default function Emergency() {
           <>
             <div className="status-hero" role="status">
               <span className="status-hero__icon" aria-hidden="true"><Icon name="check" size={32} strokeWidth={2.6} /></span>
-              <p className="status-hero__title">Help is on the way</p>
-              <p className="status-hero__text">Stay where you are if it is safe to do so.</p>
+              <p className="status-hero__title">Prototype request recorded</p>
+              <p className="status-hero__text">No station staff or emergency services were contacted.</p>
             </div>
             <div className="section">
-              <SummaryList items={[...summaryItems, { label: 'Status', value: 'Assistance requested', tone: 'success' }]} />
+              <SummaryList items={[...summaryItems, { label: 'Status', value: 'Demo only', tone: 'success' }]} />
             </div>
-            <p className="proto-note">This is a prototype simulation. No real emergency services have been contacted.</p>
+            <p className="proto-note">This prototype does not contact emergency services or station staff.</p>
             <div className="actions">
               <button type="button" className="btn btn--dark btn--block" onClick={() => navigate('/')}>Back to Home</button>
               <button type="button" className="btn btn--secondary btn--block" onClick={resetFlow}>New request</button>
