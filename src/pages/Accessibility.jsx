@@ -162,11 +162,11 @@ export default function Accessibility() {
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                className="acc-cat-btn"
+                className={`acc-cat-btn acc-cat-btn--${cat.id}`}
                 onClick={() => openCategory(cat.id)}
                 aria-label={cat.label}
               >
-                <span className="acc-cat-icon">{cat.icon}</span>
+                <span className={`acc-cat-icon acc-cat-icon--${cat.id}`}>{cat.icon}</span>
                 <div className="acc-cat-text">
                   <span className="acc-cat-label">{cat.label}</span>
                   <span className="acc-cat-desc">{cat.desc}</span>

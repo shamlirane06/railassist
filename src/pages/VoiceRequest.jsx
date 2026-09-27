@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
+import ChevronRight from '../components/ChevronRight'
 import { STATION_META, CURRENT_LOCATION, LOCATIONS, HELP_POINTS } from '../data/stationData'
 import './HelpPoints.css'
 
@@ -218,13 +219,13 @@ export default function VoiceRequest() {
             <p className="help-step-label">What do you need help with?</p>
             <div className="help-home-options">
               {HELP_TYPES.map(type => (
-                <button key={type.id} className="help-type-btn" onClick={() => selectType(type.id)}>
-                  <span className="help-option-icon"><HelpOptionIcon type={type.id} /></span>
+                <button key={type.id} className={`help-type-btn help-type-btn--${type.id}`} onClick={() => selectType(type.id)}>
+                  <span className={`help-option-icon help-option-icon--${type.id}`}><HelpOptionIcon type={type.id} /></span>
                   <span className="help-type-copy">
                     <span className="help-type-name">{type.label}</span>
                     <span className="help-type-desc">{type.desc}</span>
                   </span>
-                  <span className="help-option-chevron" aria-hidden="true">›</span>
+                  <span className="help-option-chevron"><ChevronRight /></span>
                 </button>
               ))}
             </div>
@@ -451,7 +452,7 @@ export default function VoiceRequest() {
                     {LOCATIONS.find(location => location.id === hp.locId)?.name}
                   </span>
                 </div>
-                <span className="help-point-arrow">›</span>
+                <span className="help-point-arrow"><ChevronRight /></span>
               </button>
             ))}
           </div>

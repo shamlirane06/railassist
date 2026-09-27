@@ -12,6 +12,8 @@
   --ra-primary: #b4232f;
   --ra-primary-dark: #8f1d27;
   --ra-primary-light: #fbecee;
+  --ra-accent: #1f9d72;
+  --ra-dark: #172033;
   --ra-background: #f7f8fa;
   --ra-surface: #ffffff;
   --ra-surface-soft: #f8f9fb;
@@ -23,11 +25,12 @@
   --ra-warning: #e7a91a;
   --ra-danger: #c62828;
   --ra-navy: #18364b;
-  --ra-radius-sm: 10px;
-  --ra-radius-md: 14px;
-  --ra-radius-lg: 18px;
-  --ra-shadow-sm: 0 1px 2px rgba(23, 43, 59, .06);
-  --ra-shadow-md: 0 4px 18px rgba(16, 24, 40, .06);
+  --ra-radius-sm: 12px;
+  --ra-radius-md: 16px;
+  --ra-radius-lg: 20px;
+  --ra-radius-xl: 24px;
+  --ra-shadow-sm: 0 3px 12px rgba(23, 43, 59, .06);
+  --ra-shadow-md: 0 8px 24px rgba(16, 24, 40, .09);
   --ra-space-1: 4px;
   --ra-space-2: 8px;
   --ra-space-3: 12px;

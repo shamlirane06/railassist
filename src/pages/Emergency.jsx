@@ -147,11 +147,11 @@ export default function Emergency() {
             {EMERGENCY_TYPES.map(t => (
               <button
                 key={t.id}
-                className="sos-type-btn"
+                className={`sos-type-btn sos-type-btn--${t.id}`}
                 onClick={() => { setType(t.id); setStep(STEP_DETAILS) }}
                 aria-label={t.label}
               >
-                <span className="sos-type-icon">{t.icon}</span>
+                <span className={`sos-type-icon sos-type-icon--${t.id}`}>{t.icon}</span>
                 <div className="sos-type-text">
                   <span className="sos-type-label">{t.label}</span>
                   <span className="sos-type-desc">{t.desc}</span>

@@ -278,7 +278,7 @@ export default function Home() {
             {COMMON_PLACES.map(({ id, label, Icon }) => (
               <button
                 key={id}
-                className="home-place__card"
+                className={`home-place__card home-place__card--${id}`}
                 onClick={() => setCommonCategory(id)}
                 aria-label={label}
               >

@@ -1,3 +1,5 @@
+import ChevronRight from './ChevronRight'
+
 const TYPE_LABELS = {
   platform: 'Platform',
   'toilet-accessible': 'Accessible Facility',
@@ -26,7 +28,7 @@ export default function DestinationRow({ location, onClick }) {
             : <><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>
   return (
     <button className="destination-row" onClick={onClick}>
-      <span className="destination-row__icon" aria-hidden="true">
+      <span className={`destination-row__icon destination-row__icon--${location.type}`} aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           {icon}
         </svg>
@@ -35,7 +37,7 @@ export default function DestinationRow({ location, onClick }) {
         <span className="destination-row__name">{location.name}</span>
         <span className="destination-row__type">{TYPE_LABELS[location.type] || location.type}</span>
       </span>
-      <span className="destination-row__chevron" aria-hidden="true">›</span>
+      <span className="destination-row__chevron"><ChevronRight /></span>
     </button>
   )
 }

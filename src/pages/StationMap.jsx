@@ -253,7 +253,7 @@ export default function StationMap() {
                 {CATEGORIES.map(cat => (
                   <button
                     key={cat.key}
-                    className="smap-cat-btn"
+                    className={`smap-cat-btn smap-cat-btn--${cat.key}`}
                     onClick={() => setActiveCat(cat.key)}
                     aria-label={cat.label}
                   >
@@ -424,7 +424,7 @@ export default function StationMap() {
             <rect x="299" y="112" width="86" height="70" rx="3"
                   fill={selected?.id === 'elevator' ? '#fde8e8' : '#dbeafe'}
                   stroke={selected?.id === 'elevator' ? '#CC2027' : '#3b82f6'} strokeWidth="1.5"/>
-            <text x="342" y="140" textAnchor="middle" fontSize="20" fill="#1d4ed8">⇅</text>
+            <path d="M342 125v24m0-24-5 5m5-5 5 5m-5 24-5-5m5 5 5-5" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             <text x="342" y="156" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#1d4ed8">ELEVATOR</text>
             <text x="342" y="170" textAnchor="middle" fontSize="7" fontWeight="700" fill="#3b82f6">STEP-FREE</text>
           </g>
@@ -445,7 +445,7 @@ export default function StationMap() {
             <rect x="471" y="112" width="80" height="70" rx="3"
                   fill={selected?.id === 'escalator' ? '#fde8e8' : '#dcfce7'}
                   stroke={selected?.id === 'escalator' ? '#CC2027' : '#16a34a'} strokeWidth="1.5"/>
-            <text x="511" y="140" textAnchor="middle" fontSize="20" fill="#15803d">⇅</text>
+            <path d="M511 125v24m0-24-5 5m5-5 5 5m-5 24-5-5m5 5 5-5" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             <text x="511" y="156" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#15803d">ESCALATOR</text>
             <text x="511" y="170" textAnchor="middle" fontSize="7" fontWeight="700" fill="#16a34a">STEP-FREE</text>
           </g>
@@ -592,7 +592,7 @@ export default function StationMap() {
                   fill="#aeb9c4" rx="1"/>
           ))}
           <text x="450" y="576" textAnchor="middle" fontSize="8" fill="#687687" letterSpacing="1">
-            ← TRACKS CONTINUE BEYOND STATION →
+            TRACKS CONTINUE BEYOND STATION
           </text>
 
 
@@ -667,7 +667,7 @@ export default function StationMap() {
           <span>Destination</span>
         </div>
         <div className="smap-legend-item">
-          <span className="smap-legend-sym">⇅</span>
+          <svg className="smap-legend-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v18m0-18-4 4m4-4 4 4m-4 18-4-4m4 4 4-4" /></svg>
           <span>Elevator / Escalator</span>
         </div>
         <div className="smap-legend-item">
